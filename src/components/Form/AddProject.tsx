@@ -15,13 +15,11 @@ import {
   Textarea,
 } from '@chakra-ui/react';
 import axios from 'axios';
-import type { Dispatch, SetStateAction } from 'react';
-import { useEffect, useState } from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import type { MultiSelectOptions } from '@/constants';
 import type { PoW } from '@/interface/pow';
-import { userStore } from '@/store/user';
 
 import { SkillSelect } from '../misc/SkillSelect';
 
@@ -57,7 +55,6 @@ export const AddProject = ({
   const [skillsError, setSkillsError] = useState<boolean>(false);
   const [skills, setSkills] = useState<MultiSelectOptions[]>([]);
   const [subSkills, setSubSkills] = useState<MultiSelectOptions[]>([]);
-  const { userInfo } = userStore();
 
   const projectToEdit =
     selectedProject !== null && pow ? pow[selectedProject as number] : null;
@@ -77,13 +74,13 @@ export const AddProject = ({
       setValue('description', projectToEdit.description);
       setValue('link', projectToEdit.link);
       setSkills(
-        projectToEdit.skills.map((value: string) => ({ label: value, value }))
+        projectToEdit.skills.map((value: string) => ({ label: value, value })),
       );
       setSubSkills(
         projectToEdit.subSkills.map((value: string) => ({
           label: value,
           value,
-        }))
+        })),
       );
     }
   }, [isOpen, projectToEdit, setValue, setSelectedProject]);
@@ -113,7 +110,6 @@ export const AddProject = ({
     if (upload) {
       try {
         await axios.post('/api/pow/create', {
-          userId: userInfo?.id,
           pows: [projectData],
         });
         if (onNewPow) {

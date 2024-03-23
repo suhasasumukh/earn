@@ -1,54 +1,90 @@
 # Contributing to Earn
 
-Whether you're looking to raise an issue, fix a bug, or add a feature, we're thrilled you're here to improve the project. This document outlines how to become a contributor to this project.
-
-### Table of Contents
-
-1. [Code of Conduct](#code-of-conduct)
-2. [How to Contribute](#how-to-contribute)
-3. [Pull Requests](#pull-requests)
-4. [Style Guidelines](#style-guidelines)
-5. [Review Process](#review-process)
-
-### Code of Conduct
-
-We expect all contributors to act professionally and respectfully, and we expect our social channels to be a safe and enjoyable environment for all.
-
 ### How to Contribute
 
-1. **Update your fork:** Before you make any changes, make sure your fork is up to date with the main branch.
-    ```bash
-    git pull origin main
-    ```
-2. **Create a new branch:** Create a new branch where you'll do your work.
+1. Fork this repository to your own GitHub account and then clone it to your local device.
+
+2. Create a new branch where you'll do your work.
     ```bash
     git checkout -b my-new-feature
     ```
-3. **Make your changes:** Make the necessary changes to the code or documentation.
-
-4. **Commit your changes:** Once you've made your changes, commit them.
+3. Install the dependencies with:
     ```bash
-    git add .
-    git commit -m "Add some feature"
+    pnpm i
     ```
-> **Note:** If errors occur, run `yarn format` to fix and remove lint errors prior to pushing changes.
-5. **Push your changes:** Push the changes to your new branch on your fork.
+4. Set up your `.env` file.
+  - Start by copying the `.env.example` file to a new file named `.env`. This file will store your local environment settings.
+  - Use `openssl rand -base64 32` to generate a key and add it under `NEXTAUTH_SECRET` in the .env file.
+  - Database setup
+    - Create a local `MySQL` instance and replace `<user>`, `<pass>`, `<db-host>`, and `<db-port>` with their applicable values.
+      ```
+      DATABASE_URL='mysql://<user>:<pass>@<db-host>:<db-port>'
+      ``` 
+    - If you don't want to create a local DB, then you can also consider using services like railway.app or render.
+      - [Setup MySQL DB with railway.app](https://docs.railway.app/guides/mysql)
+      - [Setup MYSQL DB with render](https://docs.render.com/deploy-mysql)
+
+    - Generate prisma migrations & client.
+      ```bash
+      npx prisma migrate dev --name init && npx prisma generate
+      ```
+      
+  - You have to set up resend to run the app:
+    - [Resend](https://resend.com): To obtain your `RESEND_API_KEY`, visit the Resend dashboard. This credential is essential for setting up Email Auth.
+
+5. Start Developing
     ```bash
-    git push origin my-new-feature
+    pnpm dev
     ```
-6. **Create a pull request:** Go to your fork on GitHub and click the 'Compare & pull request' button next to your new branch to create a new pull request.
 
-### Pull Requests
+## Making a Pull Request
 
-- The pull request should be related to an issue. If an issue doesn't exist for your contribution, create one.
-- The pull request should have a descriptive title and any necessary explanations in the comments.
-- Make sure your pull request is based on the latest commits to avoid conflicts.
+- Be sure to [check the "Allow edits from maintainers" option](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork) while creating your PR as we may suggest some changes or request improvements.
+- Set the base branch as `staging` when opening a pull request.
+- If your PR refers to or fixes an issue, be sure to add `refs #XXX` or `fixes #XXX` to the PR description. Replacing `XXX` with the respective issue number. See more about [Linking a pull request to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue).
+- Be sure to fill the PR Template accordingly.
 
-### Style Guidelines
+## Guidelines for committing pnpm lockfile
 
-- Adhere to the existing coding style.
-- Write your code in TypeScript, ensuring it follows best practices.
+Do not commit your `pnpm-lock.yaml` unless you've made changes to the `package.json`. If you've already committed `pnpm-lock.yaml` unintentionally, follow these steps to undo:
 
-### Review Process
-- A maintainer will review the pull request and provide feedback or merge it.
-- If changes are required, make them and push them to the same branch, and the pull request will automatically update.
+If your last commit has the `pnpm-lock.yaml` file alongside other files and you only wish to uncommit the `pnpm-lock.yaml`:
+   ```bash
+   git checkout HEAD~1 pnpm-lock.yaml
+   git commit -m "Revert pnpm-lock.yaml changes"
+   ```
+If you've pushed the commit with the `pnpm-lock.yaml`:
+   1. Correct the commit locally using the above method.
+   2. Carefully force push:
+
+   ```bash
+   git push origin <your-branch-name> --force
+   ```
+
+If `pnpm-lock.yaml` was committed a while ago and there have been several commits since, you can use the following steps to revert just the `pnpm-lock.yaml` changes without impacting the subsequent changes:
+
+1. **Checkout a Previous Version**:
+   - Find the commit hash before the `pnpm-lock.yaml` was unintentionally committed. You can do this by viewing the Git log:
+     ```bash
+     git log pnpm-lock.yaml
+     ```
+   - Once you have identified the commit hash, use it to checkout the previous version of `pnpm-lock.yaml`:
+     ```bash
+     git checkout <commit_hash> pnpm-lock.yaml
+     ```
+
+2. **Commit the Reverted Version**:
+   - After checking out the previous version of the `pnpm-lock.yaml`, commit this change:
+     ```bash
+     git commit -m "Revert pnpm-lock.yaml to its state before unintended changes"
+     ```
+
+3. **Proceed with Caution**:
+   - If you need to push this change, first pull the latest changes from your remote branch to ensure you're not overwriting other recent changes:
+     ```bash
+     git pull origin <your-branch-name>
+     ```
+   - Then push the updated branch:
+     ```bash
+     git push origin <your-branch-name>
+     ```

@@ -1,6 +1,4 @@
-import type { ThemeConfig } from '@chakra-ui/react';
-import { extendTheme } from '@chakra-ui/react';
-import { StepsTheme as Steps } from 'chakra-ui-steps';
+import { extendTheme, type ThemeConfig } from '@chakra-ui/react';
 
 import { styles } from '../theme/styles';
 
@@ -44,7 +42,16 @@ const theme = extendTheme({
   config,
   styles,
   components: {
-    Steps,
+    Switch: {
+      baseStyle: {
+        track: {
+          bg: 'brand.slate.400',
+          _checked: {
+            bg: 'brand.purple',
+          },
+        },
+      },
+    },
     Button: {
       baseStyle: {
         bg: 'brand.purple',

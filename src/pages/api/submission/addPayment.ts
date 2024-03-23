@@ -1,10 +1,54 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getToken } from 'next-auth/jwt';
 
+import { sendEmailNotification } from '@/features/emails';
 import { prisma } from '@/prisma';
 
-export default async function user(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
+  const token = await getToken({ req });
+
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const userId = token.id;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'Invalid token' });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId as string,
+    },
+  });
+
+  if (!user) {
+    return res.status(400).json({ error: 'Unauthorized' });
+  }
+
   const { id, isPaid, paymentDetails } = req.body;
   try {
+    const currentSubmission = await prisma.submission.findUnique({
+      where: { id },
+      include: { listing: true, user: true },
+    });
+
+    if (!currentSubmission) {
+      return res.status(404).json({
+        message: `Submission with ID ${id} not found.`,
+      });
+    }
+
+    if (user.currentSponsorId !== currentSubmission.listing.sponsorId) {
+      return res.status(403).json({
+        message: 'Unauthorized',
+      });
+    }
+
     const result = await prisma.submission.update({
       where: {
         id,
@@ -22,6 +66,7 @@ export default async function user(req: NextApiRequest, res: NextApiResponse) {
       updatedBounty.totalPaymentsMade = {
         increment: 1,
       };
+      await sendEmailNotification({ type: 'addPayment', id });
     }
     await prisma.bounties.update({
       where: {
@@ -31,9 +76,9 @@ export default async function user(req: NextApiRequest, res: NextApiResponse) {
         ...updatedBounty,
       },
     });
-    res.status(200).json(result);
+    return res.status(200).json(result);
   } catch (error) {
-    res.status(400).json({
+    return res.status(400).json({
       error,
       message: `Error occurred while updating payment of a submission ${id}.`,
     });

@@ -10,23 +10,21 @@ import {
   Select,
   Tooltip,
 } from '@chakra-ui/react';
-import type { Dispatch, SetStateAction } from 'react';
-import { useState } from 'react';
+import { type Dispatch, type SetStateAction, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import ReactSelect from 'react-select';
 import makeAnimated from 'react-select/animated';
 
 import { SkillSelect } from '@/components/misc/SkillSelectTalent';
-import type { MultiSelectOptions } from '@/constants';
 import {
   CommunityList,
   IndustryList,
+  type MultiSelectOptions,
   web3Exp,
   workExp,
   workType,
 } from '@/constants';
-import type { SubSkillsType } from '@/interface/skills';
-import { SkillList } from '@/interface/skills';
+import { SkillList, type SubSkillsType } from '@/interface/skills';
 
 import type { UserStoreType } from './types';
 
@@ -76,7 +74,7 @@ export function YourWork({ setStep, useFormStore }: Step1Props) {
       ...data,
       skills: skills.map((mainskill) => {
         const main = SkillList.find(
-          (skill) => skill.mainskill === mainskill.value
+          (skill) => skill.mainskill === mainskill.value,
         );
         const sub: SubSkillsType[] = [];
 
@@ -218,8 +216,8 @@ export function YourWork({ setStep, useFormStore }: Step1Props) {
                     ...st,
                     community: JSON.stringify(
                       e.map(
-                        (elm: { label: string; value: string }) => elm.value
-                      )
+                        (elm: { label: string; value: string }) => elm.value,
+                      ),
                     ),
                   };
                 });
@@ -253,8 +251,8 @@ export function YourWork({ setStep, useFormStore }: Step1Props) {
                     ...st,
                     interests: JSON.stringify(
                       e.map(
-                        (elm: { label: string; value: string }) => elm.value
-                      )
+                        (elm: { label: string; value: string }) => elm.value,
+                      ),
                     ),
                   };
                 });

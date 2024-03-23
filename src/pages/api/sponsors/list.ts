@@ -1,20 +1,33 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getToken } from 'next-auth/jwt';
 
 import { prisma } from '@/prisma';
 
 export default async function sponsors(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
   const params = req.query;
-  const userId = params.userId as string;
+
+  const token = await getToken({ req });
+
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const userId = token.id;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'Invalid token' });
+  }
+
   const searchString = params.searchString as string;
-  const take = params.take ? parseInt(params.take as string, 10) : 10;
+  const take = params.take ? parseInt(params.take as string, 10) : 50;
   let finalSponsors = [];
   try {
     const user = await prisma.user.findUnique({
       where: {
-        id: userId,
+        id: userId as string,
       },
       select: {
         id: true,
@@ -27,8 +40,11 @@ export default async function sponsors(
             name: {
               contains: searchString,
             },
+            Hackathon: null,
           }
-        : {};
+        : {
+            Hackathon: null,
+          };
       const sponsorsList = await prisma.sponsors.findMany({
         where: {
           ...whereSearch,
@@ -61,9 +77,10 @@ export default async function sponsors(
               name: {
                 contains: searchString,
               },
+              Hackathon: null,
             },
           }
-        : {};
+        : { sponsor: { Hackathon: null } };
       const sponsorsList = await prisma.userSponsors.findMany({
         where: {
           userId,

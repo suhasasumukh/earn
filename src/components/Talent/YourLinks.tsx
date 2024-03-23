@@ -11,10 +11,12 @@ import {
   useDisclosure,
 } from '@chakra-ui/react';
 import axios from 'axios';
-import type { Dispatch, SetStateAction } from 'react';
-import { useState } from 'react';
-import type { FieldValues, UseFormRegister } from 'react-hook-form';
-import { useForm } from 'react-hook-form';
+import { type Dispatch, type SetStateAction, useState } from 'react';
+import {
+  type FieldValues,
+  useForm,
+  type UseFormRegister,
+} from 'react-hook-form';
 
 import type { PoW } from '@/interface/pow';
 import { userStore } from '@/store/user';
@@ -41,7 +43,7 @@ export const socials = [
   {
     label: 'LinkedIn',
     placeHolder: 'https://linkedin.com/in/tony-stark',
-    icon: '/assets/talent/link.png',
+    icon: '/assets/talent/linkedin.png',
   },
   {
     label: 'Telegram',
@@ -144,16 +146,15 @@ export function YourLinks({ success, useFormStore }: Props) {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { form } = useFormStore();
   const [pow, setPow] = useState<PoW[]>([]);
-  const [socialsError, setsocialsError] = useState<boolean>(false);
+  const [socialsError, setsocialsError] = useState<number>(0);
   const [isLoading, setisLoading] = useState<boolean>(false);
   const [selectedProject, setSelectedProject] = useState<number | null>(null);
 
   const { updateState } = useFormStore();
 
-  const { setUserInfo, userInfo } = userStore();
+  const { setUserInfo } = userStore();
 
   const uploadProfile = async (
-    // eslint-disable-next-line @typescript-eslint/no-shadow
     socials: {
       discord: string;
       twitter: string;
@@ -162,9 +163,12 @@ export function YourLinks({ success, useFormStore }: Props) {
       telegram: string;
       website: string;
     },
-    // eslint-disable-next-line @typescript-eslint/no-shadow
-    pow: PoW[]
+    pow: PoW[],
   ) => {
+    if (socials.discord.length === 0) {
+      setsocialsError(2);
+      return;
+    }
     // atleast one URL
     if (
       socials.twitter.length === 0 &&
@@ -173,21 +177,19 @@ export function YourLinks({ success, useFormStore }: Props) {
       socials.telegram.length === 0 &&
       socials.website.length === 0
     ) {
-      setsocialsError(true);
+      setsocialsError(1);
       return;
     }
-    setsocialsError(false);
+    setsocialsError(0);
 
     updateState({ ...socials });
     setisLoading(true);
     try {
       await axios.post('/api/pow/create', {
-        userId: userInfo?.id,
         pows: pow,
       });
 
       const updateOptions = {
-        id: userInfo?.id,
         ...form,
         ...socials,
         superteamLevel: 'Lurker',
@@ -197,9 +199,7 @@ export function YourLinks({ success, useFormStore }: Props) {
       const { subSkills, ...finalOptions } = updateOptions;
 
       const updatedUser = await axios.post('/api/user/update/', finalOptions);
-      await axios.post('/api/email/manual/welcomeTalent/', {
-        email: userInfo?.email,
-      });
+      await axios.post('/api/email/manual/welcomeTalent/');
       setUserInfo(updatedUser?.data);
       success();
     } catch (e) {
@@ -219,7 +219,7 @@ export function YourLinks({ success, useFormStore }: Props) {
         telegram: data.Telegram,
         website: data.Website,
       },
-      pow
+      pow,
     );
   };
   return (
@@ -267,7 +267,7 @@ export function YourLinks({ success, useFormStore }: Props) {
                     <DeleteIcon
                       onClick={() => {
                         setPow((prevPow) =>
-                          prevPow.filter((_ele, id) => idx !== id)
+                          prevPow.filter((_ele, id) => idx !== id),
                         );
                       }}
                       cursor={'pointer'}
@@ -288,9 +288,15 @@ export function YourLinks({ success, useFormStore }: Props) {
             >
               Add Project
             </Button>
-            {socialsError && (
+            {socialsError === 1 && (
               <Text align="center" mb={'0.5rem'} color={'red'}>
-                Please fill at least one social link to continue!
+                Please fill at least one social (apart from Discord) to
+                continue!
+              </Text>
+            )}
+            {socialsError === 2 && (
+              <Text align="center" mb={'0.5rem'} color={'red'}>
+                Please fill the discord field!
               </Text>
             )}
             <Button

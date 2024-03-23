@@ -26,6 +26,7 @@ interface Props {
   bountyId: string | undefined;
   isDeadlinePassed?: boolean;
   hasWinnersAnnounced?: boolean;
+  isRolling?: boolean;
 }
 
 export function PublishResults({
@@ -37,6 +38,7 @@ export function PublishResults({
   bountyId,
   isDeadlinePassed,
   hasWinnersAnnounced = false,
+  isRolling = false,
 }: Props) {
   const [isPublishingResults, setIsPublishingResults] = useState(false);
   const [isWinnersAnnounced, setIsWinnersAnnounced] =
@@ -83,7 +85,6 @@ export function PublishResults({
     const timer = setTimeout(() => {
       window.location.reload();
     }, 1500);
-    // eslint-disable-next-line consistent-return
     return () => clearTimeout(timer);
   }, [isWinnersAnnounced]);
 
@@ -141,7 +142,8 @@ export function PublishResults({
               </Box>
             </Alert>
           )}
-          {!isWinnersAnnounced &&
+          {!isRolling &&
+            !isWinnersAnnounced &&
             rewards?.length &&
             totalWinners === rewards?.length &&
             !isDeadlinePassed && (

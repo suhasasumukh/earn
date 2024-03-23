@@ -2,10 +2,13 @@ import { Box, Flex } from '@chakra-ui/react';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 
-import { BountiesCard, ListingSection } from '@/components/misc/listingsCard';
 import { EmptySection } from '@/components/shared/EmptySection';
-import { Loading } from '@/components/shared/Loading';
-import type { Bounty } from '@/interface/bounty';
+import {
+  type Bounty,
+  ListingCard,
+  ListingCardSkeleton,
+  ListingSection,
+} from '@/features/listings';
 import { Home } from '@/layouts/Home';
 
 interface Listings {
@@ -47,37 +50,22 @@ function AllListingsPage() {
           title="Freelance Gigs"
           sub="Bite sized tasks for freelancers"
           emoji="/assets/home/emojis/moneyman.png"
-          all
         >
-          {isListingsLoading && (
-            <Flex align="center" justify="center" direction="column" minH={52}>
-              <Loading />
-            </Flex>
-          )}
+          {isListingsLoading &&
+            Array.from({ length: 8 }, (_, index) => (
+              <ListingCardSkeleton key={index} />
+            ))}
           {!isListingsLoading && !listings?.bounties?.length && (
             <Flex align="center" justify="center" mt={8}>
               <EmptySection
-                title="No bounties available!"
-                message="Subscribe to notifications to get notified about new bounties."
+                title="No listings available!"
+                message="Subscribe to notifications to get notified about new listings."
               />
             </Flex>
           )}
           {!isListingsLoading &&
             listings?.bounties?.map((bounty) => {
-              return (
-                <BountiesCard
-                  slug={bounty?.slug}
-                  rewardAmount={bounty?.rewardAmount}
-                  key={bounty?.id}
-                  sponsorName={bounty?.sponsor?.name}
-                  deadline={bounty?.deadline}
-                  title={bounty?.title}
-                  logo={bounty?.sponsor?.logo}
-                  token={bounty?.token}
-                  type={bounty?.type}
-                  applicationType={bounty.applicationType}
-                />
-              );
+              return <ListingCard key={bounty.id} bounty={bounty} />;
             })}
         </ListingSection>
       </Box>

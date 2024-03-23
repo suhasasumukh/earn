@@ -1,4 +1,14 @@
-import { Box, Center, Flex, Image, Text, VStack } from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  Center,
+  Flex,
+  HStack,
+  Image,
+  Skeleton,
+  Text,
+  VStack,
+} from '@chakra-ui/react';
 import Avatar from 'boring-avatars';
 import NextLink from 'next/link';
 import { useRouter } from 'next/router';
@@ -7,6 +17,7 @@ import { useEffect, useRef, useState } from 'react';
 import { LoginWrapper } from '@/components/Header/LoginWrapper';
 import { tokenList } from '@/constants';
 import type { User } from '@/interface/user';
+import { RenaissanceLogo } from '@/svg/renaissance-logo';
 import { getURL } from '@/utils/validUrl';
 
 interface SideBarProps {
@@ -14,6 +25,7 @@ interface SideBarProps {
   listings: number;
   earners?: User[];
   userInfo?: User;
+  isTotalLoading: boolean;
 }
 
 const Step = ({
@@ -23,36 +35,28 @@ const Step = ({
   number: number;
   isComplete: boolean;
 }) => {
-  if (isComplete) {
-    return (
-      <Center
-        zIndex={'200'}
-        w={'2.375rem'}
-        h={'2.375rem'}
-        bg={'#6366F1'}
-        rounded={'full'}
-      >
-        <Image
-          w={'1.25rem'}
-          h={'1.25rem'}
-          alt=""
-          src="/assets/icons/white-tick.svg"
-        />
-      </Center>
-    );
-  }
-
   return (
     <Center
       zIndex={'200'}
       w={'2.375rem'}
       h={'2.375rem'}
-      color={'#94A3B8'}
-      bg={'#FFFFFF'}
-      border={'0.0625rem solid #94A3B8'}
+      color={isComplete ? '#FFFFFF' : '#94A3B8'}
+      bg={isComplete ? '#6366F1' : '#FFFFFF'}
+      border={
+        isComplete ? '0 transparent #6366F100' : '0.0625rem solid #94A3B8'
+      }
       rounded={'full'}
     >
-      {number}
+      {isComplete ? (
+        <Image
+          w={'1.25rem'}
+          h={'1.25rem'}
+          alt="New New"
+          src="/assets/icons/white-tick.svg"
+        />
+      ) : (
+        number
+      )}
     </Center>
   );
 };
@@ -94,24 +98,18 @@ const GettingStarted = ({ userInfo }: GettingStartedProps) => {
           h={'100%'}
         >
           <Box ml={'0.8125rem'}>
-            {!userInfo?.id ? (
-              <Text
-                as="button"
-                color={'black'}
-                fontSize={'md'}
-                fontWeight={500}
-                _hover={{
-                  color: 'brand.purple',
-                }}
-                onClick={() => setTriggerLogin(true)}
-              >
-                Create your account
-              </Text>
-            ) : (
-              <Text color={'brand.purple'} fontSize={'md'} fontWeight={500}>
-                Create your account
-              </Text>
-            )}
+            <Text
+              as="button"
+              color={!userInfo?.id ? 'black' : 'brand.purple'}
+              fontSize={'md'}
+              fontWeight={500}
+              _hover={{
+                color: 'brand.purple',
+              }}
+              onClick={() => !userInfo?.id && setTriggerLogin(true)}
+            >
+              Create your account
+            </Text>
             <Text color={'gray.500'} fontSize={'md'} fontWeight={500}>
               and get personalized notifications
             </Text>
@@ -157,7 +155,7 @@ const GettingStarted = ({ userInfo }: GettingStartedProps) => {
                 }}
                 onClick={() => {
                   if (userInfo?.id) {
-                    router.push('/bounties');
+                    router.push('/all');
                   } else {
                     setTriggerLogin(true);
                   }
@@ -183,9 +181,11 @@ const GettingStarted = ({ userInfo }: GettingStartedProps) => {
 const TotalStats = ({
   bountyCount,
   TVE,
+  isTotalLoading,
 }: {
   bountyCount: number;
   TVE: number;
+  isTotalLoading: boolean;
 }) => {
   return (
     <Flex
@@ -205,14 +205,13 @@ const TotalStats = ({
           src="/assets/icons/lite-purple-dollar.svg"
         />
         <Box>
-          <Text color={'black'} fontSize={'sm'} fontWeight={'600'}>
-            ${TVE.toLocaleString()}{' '}
-            <span
-              style={{
-                color: '#64748B',
-              }}
-            ></span>
-          </Text>
+          {isTotalLoading ? (
+            <Skeleton w="54px" h="14px" />
+          ) : (
+            <Text color={'black'} fontSize={'sm'} fontWeight={'600'}>
+              ${TVE.toLocaleString()}
+            </Text>
+          )}
           <Text color={'gray.500'} fontSize={'xs'} fontWeight={'400'}>
             Total Value Earned
           </Text>
@@ -228,9 +227,13 @@ const TotalStats = ({
           src="/assets/icons/lite-purple-suitcase.svg"
         />
         <Box>
-          <Text color={'black'} fontSize={'sm'} fontWeight={'600'}>
-            {bountyCount}
-          </Text>
+          {isTotalLoading ? (
+            <Skeleton w="32px" h="14px" />
+          ) : (
+            <Text color={'black'} fontSize={'sm'} fontWeight={'600'}>
+              {bountyCount}
+            </Text>
+          )}
           <Text color={'gray.500'} fontSize={'xs'} fontWeight={'400'}>
             Opportunities Listed
           </Text>
@@ -271,7 +274,7 @@ const Earner = ({
             rounded={'full'}
             src={avatar.replace(
               '/upload/',
-              '/upload/c_scale,w_64,h_64,f_auto/'
+              '/upload/c_scale,w_64,h_64,f_auto/',
             )}
           />
         ) : (
@@ -369,16 +372,82 @@ const RecentEarners = ({ earners }: { earners?: User[] }) => {
   );
 };
 
-export const SideBar = ({
+const SidebarBanner = () => {
+  return (
+    <Flex
+      direction={'column'}
+      gap={1}
+      w={'full'}
+      h={'max-content'}
+      px={6}
+      py={8}
+      bgImage={"url('/assets/hackathon/renaissance/sidebar-bg.png')"}
+      bgSize="cover"
+      bgPosition="center"
+      bgRepeat="no-repeat"
+      rounded={'lg'}
+    >
+      <HStack>
+        <RenaissanceLogo
+          styles={{
+            width: '100%',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            marginBottom: '16px',
+          }}
+        />
+      </HStack>
+      <Text
+        mt={1}
+        color={'brand.slate.800'}
+        fontSize={'lg'}
+        fontWeight={'600'}
+        lineHeight={'6'}
+      >
+        Build a project for the latest Solana global hackathon!
+      </Text>
+      <Text
+        mt={'0.5rem'}
+        color={'brand.slate.700'}
+        fontSize={'1rem'}
+        lineHeight={'1.1875rem'}
+      >
+        Submit to any of the Renaissance side tracks on Earn and stand to win
+        some $$. Deadline for submissions is April 8, 2024.
+      </Text>
+      <Button
+        as={NextLink}
+        mt={'1.5625rem'}
+        py={'0.8125rem'}
+        fontWeight={'500'}
+        textAlign={'center'}
+        bg="#000"
+        borderRadius={8}
+        _hover={{ bg: '#716f6e' }}
+        href="/renaissance"
+      >
+        View Tracks
+      </Button>
+    </Flex>
+  );
+};
+
+export const HomeSideBar = ({
   userInfo,
   listings,
   total,
   earners,
+  isTotalLoading,
 }: SideBarProps) => {
   return (
     <Flex direction={'column'} rowGap={'2.5rem'} w={'22.125rem'} pl={6}>
       <GettingStarted userInfo={userInfo} />
-      <TotalStats bountyCount={listings} TVE={total} />
+      <TotalStats
+        isTotalLoading={isTotalLoading}
+        bountyCount={listings}
+        TVE={total}
+      />
+      <SidebarBanner />
       <RecentEarners earners={earners} />
     </Flex>
   );

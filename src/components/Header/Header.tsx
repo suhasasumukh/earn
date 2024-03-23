@@ -1,12 +1,13 @@
 import { ChevronDownIcon, CloseIcon, HamburgerIcon } from '@chakra-ui/icons';
-import type { LinkProps } from '@chakra-ui/react';
 import {
   Box,
   Collapse,
+  Divider,
   Flex,
   IconButton,
   Image,
   Link,
+  type LinkProps,
   Popover,
   PopoverTrigger,
   Stack,
@@ -14,8 +15,13 @@ import {
   useColorModeValue,
   useDisclosure,
 } from '@chakra-ui/react';
+import NextLink from 'next/link';
 import { useRouter } from 'next/router';
 
+import { RenaissanceSecondaryLogo } from '@/svg/renaissance-secondary';
+import { ScribesLogo } from '@/svg/scribes-logo';
+
+import { AnnouncementBar } from './AnnouncementBar';
 import { BountySnackbar } from './BountySnackbar';
 import { UserInfo } from './UserInfo';
 
@@ -23,6 +29,30 @@ interface NavItem {
   label: string;
   children?: Array<NavItem>;
   href?: string;
+}
+
+function renderLabel(navItem: NavItem) {
+  switch (navItem.label) {
+    case 'Renaissance':
+      return (
+        <Box>
+          <RenaissanceSecondaryLogo
+            styles={{ width: '116px', height: 'auto' }}
+          />
+        </Box>
+      );
+    case 'Scribes':
+      return (
+        <Box>
+          <ScribesLogo
+            styles={{ width: '60px', height: 'auto' }}
+            variant="#a459ff"
+          />
+        </Box>
+      );
+    default:
+      return navItem.label;
+  }
 }
 
 const NAV_ITEMS: Array<NavItem> = [
@@ -33,20 +63,24 @@ const NAV_ITEMS: Array<NavItem> = [
     children: [
       {
         label: 'Content',
-        href: '/all/Content/',
+        href: '/category/content/',
       },
       {
         label: 'Design',
-        href: '/all/Design/',
+        href: '/category/design/',
       },
       {
         label: 'Development',
-        href: '/all/Development/',
+        href: '/category/development/',
       },
-      // {
-      //   label: 'HYPERDRIVE',
-      //   href: '/all/Hyperdrive/',
-      // },
+      {
+        label: 'Renaissance',
+        href: '/renaissance/',
+      },
+      {
+        label: 'Scribes',
+        href: '/scribes/',
+      },
     ],
   },
 ];
@@ -91,21 +125,14 @@ const MobileNavItem = ({ label, children, href }: NavItem) => {
             children.map((child) => (
               <Link
                 key={child.label}
+                as={NextLink}
                 mt={0}
                 pb={2}
                 color={'gray.500'}
                 fontSize="md"
                 href={child.href}
               >
-                {/* {child.label === 'HYPERDRIVE' ? (
-                  <Image
-                    w={100}
-                    alt="Hyperdrive Hackathon"
-                    src="/assets/category_assets/icon/Hyperdrive.svg"
-                  />
-                ) : ( */}
-                {child.label}
-                {/* )} */}
+                {renderLabel(child)}
               </Link>
             ))}
         </Stack>
@@ -160,7 +187,7 @@ const NavLink = ({
   };
 
   return (
-    <Link href={href} {...styles}>
+    <Link as={NextLink} href={href} {...styles}>
       {typeof label === 'string' ? <Text fontSize="sm">{label}</Text> : label}
     </Link>
   );
@@ -179,16 +206,7 @@ const DesktopNav = () => {
               <PopoverTrigger>
                 <NavLink
                   href={navItem.href ?? '#'}
-                  label={
-                    // navItem.label === 'HYPERDRIVE' ? (
-                    //   <Image
-                    //     alt="Hyperdrive Hackathon"
-                    //     src="/assets/category_assets/icon/Hyperdrive.svg"
-                    //   />
-                    // ) : (
-                    navItem.label
-                    // )
-                  }
+                  label={renderLabel(navItem)}
                   isActive={isCurrent}
                   isCategory={true}
                 />
@@ -205,24 +223,30 @@ export const Header = () => {
   const { isOpen, onToggle } = useDisclosure();
   const router = useRouter();
 
+  const isDashboardRoute = router.pathname.startsWith('/dashboard');
+  const maxWValue = isDashboardRoute ? '' : '7xl';
+  const isRootRoute = router.pathname === '/';
+
   return (
     <Box pos="sticky" zIndex="sticky" top={0}>
       <BountySnackbar />
+      {isRootRoute && <AnnouncementBar />}
       <Flex
-        px={{ base: 4, lg: 6 }}
+        px={{ base: '2', lg: 6 }}
         py={{ base: 2, lg: 0 }}
         color="brand.slate.500"
         bg="white"
         borderBottom="1px solid"
         borderBottomColor="blackAlpha.200"
       >
-        <Flex justify={'space-between'} w="100%" maxW="7xl" mx="auto">
+        <Flex justify={'space-between'} w="100%" maxW={maxWValue} mx="auto">
           <Flex
             flex={{ base: 1, lg: 'auto' }}
             display={{ base: 'flex', lg: 'none' }}
             ml={{ base: -2 }}
           >
             <IconButton
+              _hover={{ bg: 'transparent' }}
               aria-label={'Toggle Navigation'}
               icon={
                 isOpen ? (
@@ -240,18 +264,39 @@ export const Header = () => {
             justify={{ base: 'center', lg: 'start' }}
             gap={6}
           >
-            <Link display={{ base: 'none', lg: 'flex' }} href="/">
+            <Link
+              as={NextLink}
+              alignItems={'center'}
+              gap={3}
+              display={{ base: 'none', lg: 'flex' }}
+              mr={5}
+              _hover={{ textDecoration: 'none' }}
+              href="/"
+            >
               <Image
                 h={5}
-                mr={5}
                 cursor="pointer"
                 objectFit={'contain'}
                 alt={'Superteam Earn'}
                 onClick={() => {
                   router.push('/');
                 }}
-                src={'/assets/logo/new-logo.svg'}
+                src={'/assets/logo/logo.svg'}
               />
+
+              {isDashboardRoute && (
+                <>
+                  <Divider
+                    w={'3px'}
+                    h={'24px'}
+                    borderColor={'brand.slate.400'}
+                    orientation="vertical"
+                  />
+                  <Text fontSize="sm" letterSpacing={'1.5px'}>
+                    SPONSORS
+                  </Text>
+                </>
+              )}
             </Link>
 
             <NavLink
@@ -278,12 +323,12 @@ export const Header = () => {
           >
             <DesktopNav />
           </Flex>
-          <Link display={{ base: 'flex', lg: 'none' }} href="/">
+          <Link as={NextLink} display={{ base: 'flex', lg: 'none' }} href="/">
             <Image
               h={5}
               my="auto"
               alt={'Superteam Earn'}
-              src="/assets/logo/new-logo.svg"
+              src="/assets/logo/logo.svg"
             />
           </Link>
 

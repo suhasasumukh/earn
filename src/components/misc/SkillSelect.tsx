@@ -1,11 +1,13 @@
 import { Flex, FormControl, FormLabel, Image, Tooltip } from '@chakra-ui/react';
-import type { Dispatch, SetStateAction } from 'react';
-import React, { useState } from 'react';
+import React, { type Dispatch, type SetStateAction, useState } from 'react';
 import ReactSelect from 'react-select';
 import makeAnimated from 'react-select/animated';
 
-import type { MultiSelectOptions } from '../../constants';
-import { MainSkills, skillSubSkillMap } from '../../constants';
+import {
+  MainSkills,
+  type MultiSelectOptions,
+  skillSubSkillMap,
+} from '@/constants';
 
 interface Props {
   skills: MultiSelectOptions[];
@@ -32,7 +34,7 @@ export const SkillSelect = ({
   skills.forEach((s) => {
     const subSkillsForSkill =
       skillSubSkillMap[s.value as keyof typeof skillSubSkillMap];
-    // Check if subSkillsForSkill exists and is an array before spreading
+    // check if subSkillsForSkill exists and is an array before spreading
     if (Array.isArray(subSkillsForSkill)) {
       tempSubSkills.push(...subSkillsForSkill);
     }
@@ -42,6 +44,7 @@ export const SkillSelect = ({
   const handleChange = (e: MultiSelectOptions[]) => {
     const sub: MultiSelectOptions[] = [];
     e.forEach((op) => {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       sub.push(...(skillSubSkillMap[op.value as any] as any));
     });
@@ -98,7 +101,7 @@ export const SkillSelect = ({
           }}
         />
       </FormControl>
-      <FormControl mb={5}>
+      <FormControl mb={5} isRequired>
         <Flex align={'center'} justify={'start'}>
           <FormLabel
             color={'brand.slate.500'}

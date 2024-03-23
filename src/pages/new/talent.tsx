@@ -1,4 +1,3 @@
-/* eslint-disable no-param-reassign */
 import {
   Box,
   Button,
@@ -11,19 +10,22 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import type { User } from '@prisma/client';
-import React, { Fragment, useState } from 'react';
+import axios from 'axios';
+import { type GetServerSideProps } from 'next';
+import router from 'next/router';
+import React, { Fragment, useEffect, useState } from 'react';
 import { create } from 'zustand';
 
+import { Steps } from '@/components/misc/steps';
 import { AboutYou } from '@/components/Talent/AboutYou';
 import type { UserStoreType } from '@/components/Talent/types';
-import { WelcomeMessage } from '@/components/Talent/WelcomeMessage';
 import { YourLinks } from '@/components/Talent/YourLinks';
 import { YourWork } from '@/components/Talent/YourWork';
+import { TalentBio } from '@/components/TalentBio';
 import { Default } from '@/layouts/Default';
 import { Meta } from '@/layouts/Meta';
-
-import { Steps } from '../../components/misc/steps';
-import { TalentBio } from '../../components/TalentBio';
+import { userStore } from '@/store/user';
+import { getURL } from '@/utils/validUrl';
 
 const useFormStore = create<UserStoreType>()((set) => ({
   form: {
@@ -220,8 +222,8 @@ const SuccessScreen = () => {
         flexDir={{ base: 'column', md: 'row' }}
         gap={10}
         w={'fit-content'}
-        mt={10}
         mx={'auto'}
+        mt={10}
       >
         <Box w={'full'} p={{ base: 4, md: 0 }}>
           <TalentBio
@@ -233,8 +235,8 @@ const SuccessScreen = () => {
         <VStack
           maxW={'35rem'}
           h={'full'}
-          mb={12}
           mx={{ base: 4, md: 0 }}
+          mb={12}
           p={5}
           bg="white"
           rounded={'lg'}
@@ -256,10 +258,15 @@ const SuccessScreen = () => {
   );
 };
 
-function Talent() {
-  const [currentPage, setcurrentPage] = useState<
-    'welcome' | 'steps' | 'success'
-  >('steps');
+export default function Talent() {
+  const [currentPage, setcurrentPage] = useState<'steps' | 'success'>('steps');
+  const { userInfo } = userStore();
+
+  useEffect(() => {
+    if (userInfo && userInfo?.isTalentFilled) {
+      router.push('/');
+    }
+  }, [userInfo, router]);
 
   return (
     <Default
@@ -272,13 +279,6 @@ function Talent() {
       }
     >
       <VStack>
-        {currentPage === 'welcome' && (
-          <WelcomeMessage
-            setStep={() => {
-              setcurrentPage('steps');
-            }}
-          />
-        )}
         {currentPage === 'steps' && (
           <StepsCon
             setSuccess={() => {
@@ -292,4 +292,25 @@ function Talent() {
   );
 }
 
-export default Talent;
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { req } = context;
+
+  const res = await axios.get(`${getURL()}api/user`, {
+    headers: {
+      Cookie: req.headers.cookie,
+    },
+  });
+
+  if (res.data.isTalentFilled === true) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {},
+  };
+};

@@ -1,17 +1,27 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getToken } from 'next-auth/jwt';
 
-import { WelcomeTalentTemplate } from '@/components/emails/welcomeTalentTemplate';
-import resendMail from '@/utils/resend';
+import { kashEmail, resend, WelcomeTalentTemplate } from '@/features/emails';
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
-  const { email } = req.body;
+  const token = await getToken({ req });
+
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const userEmail = token.email;
+
+  if (!userEmail) {
+    return res.status(400).json({ error: 'Invalid token' });
+  }
   try {
-    await resendMail.emails.send({
-      from: `Kash from Superteam <${process.env.RESEND_EMAIL}>`,
-      to: [email],
+    await resend.emails.send({
+      from: kashEmail,
+      to: [userEmail as string],
       subject: 'Welcome to Superteam Earn!',
       react: WelcomeTalentTemplate(),
     });

@@ -4,7 +4,7 @@ import { prisma } from '@/prisma';
 
 export default async function submission(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
   const params = req.query;
   const listingId = params.listingId as string;
@@ -17,7 +17,6 @@ export default async function submission(
         isArchived: false,
       },
     });
-    // eslint-disable-next-line no-underscore-dangle
     res.status(200).json(result?._count || 0);
   } catch (error) {
     res.status(400).json({

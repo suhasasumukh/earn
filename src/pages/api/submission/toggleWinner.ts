@@ -1,16 +1,40 @@
 import axios from 'axios';
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getToken } from 'next-auth/jwt';
 
 import { prisma } from '@/prisma';
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
-  const { id, isWinner, winnerPosition } = req.body;
+  const token = await getToken({ req });
+
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const userId = token.id;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'Invalid token' });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId as string,
+    },
+  });
+
+  if (!user) {
+    return res.status(400).json({ error: 'Unauthorized' });
+  }
+
+  const { id, isWinner, winnerPosition, ask } = req.body;
   try {
     const currentSubmission = await prisma.submission.findUnique({
       where: { id },
+      include: { listing: true },
     });
 
     if (!currentSubmission) {
@@ -19,13 +43,24 @@ export default async function handler(
       });
     }
 
+    if (user.currentSponsorId !== currentSubmission.listing.sponsorId) {
+      return res.status(403).json({
+        message: 'Unauthorized',
+      });
+    }
+
     const result = await prisma.submission.update({
       where: { id },
       data: { isWinner, winnerPosition },
+      include: {
+        listing: true,
+      },
     });
 
-    const zapierWebhookUrl = process.env.ZAPIER_SUBMISSION_WEBHOOK!;
-    await axios.post(zapierWebhookUrl, result);
+    if (process.env.NEXT_PUBLIC_VERCEL_ENV === 'production') {
+      const zapierWebhookUrl = process.env.ZAPIER_SUBMISSION_WEBHOOK!;
+      await axios.post(zapierWebhookUrl, result);
+    }
 
     if (currentSubmission.isWinner !== isWinner) {
       const bountyId = result.listingId;
@@ -33,6 +68,10 @@ export default async function handler(
         where: { id: bountyId },
         data: {
           totalWinnersSelected: isWinner ? { increment: 1 } : { decrement: 1 },
+          ...(result.listing.compensationType !== 'fixed' && {
+            rewards: { first: ask },
+            rewardAmount: ask,
+          }),
         },
       });
     }

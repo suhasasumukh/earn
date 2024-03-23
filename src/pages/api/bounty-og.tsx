@@ -1,5 +1,3 @@
-/* eslint-disable no-nested-ternary */
-
 import { ImageResponse } from '@vercel/og';
 import type { NextRequest } from 'next/server';
 
@@ -10,13 +8,17 @@ export const config = {
 };
 
 const fetchAsset = (url: URL) => fetch(url).then((res) => res.arrayBuffer());
+const formatString = (str: string, maxLength: number) =>
+  str?.length > maxLength ? `${str.slice(0, maxLength)}...` : str;
+const formatNumber = (num: string) =>
+  Number(num).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
 const fontDataP = fetchAsset(
-  new URL('../../../public/Inter-SemiBold.woff', import.meta.url)
+  new URL('../../../public/Inter-SemiBold.woff', import.meta.url),
 );
 
 const sponsorImageP = fetchAsset(
-  new URL('../../../public/assets/images/sponsor-logo.png', import.meta.url)
+  new URL('../../../public/assets/logo/sponsor-logo.png', import.meta.url),
 );
 
 export default async function handler(request: NextRequest) {
@@ -28,40 +30,42 @@ export default async function handler(request: NextRequest) {
       sponsorImageP,
     ]);
 
-    const hasTitle = searchParams.has('title');
-    const paramTitle = searchParams.get('title');
-    const title = hasTitle
-      ? paramTitle && paramTitle.length > 97
-        ? `${paramTitle.slice(0, 97)}...`
-        : paramTitle
+    const getParam = (name: any, processFn = (x: any) => x) =>
+      searchParams.has(name) ? processFn(searchParams.get(name)) : null;
+
+    const title = getParam('title', (x) =>
+      formatString(decodeURIComponent(x), 97),
+    );
+    const type = getParam('type');
+    const logo = getParam('logo', (x) => formatString(x, 100)) || sponsorImg;
+    const reward = getParam('reward', formatNumber);
+    const minRewardAsk = getParam('minRewardAsk', formatNumber);
+    const maxRewardAsk = getParam('maxRewardAsk', formatNumber);
+    const compensationType = getParam('compensationType', (x) => x) || 'fixed';
+    const sponsor = getParam('sponsor', (x) => formatString(x, 100));
+    const token = getParam('token', (x) => formatString(x, 100));
+
+    let displayReward;
+    switch (compensationType) {
+      case 'fixed':
+        displayReward = reward;
+        break;
+      case 'range':
+        displayReward = `${minRewardAsk} - ${maxRewardAsk}`;
+        break;
+      case 'variable':
+        displayReward = 'Variable';
+        break;
+    }
+
+    const getTokenIcon = (symbol: any) =>
+      tokenList.find((t) => t.tokenSymbol === symbol)?.icon;
+
+    const icon = getTokenIcon(token);
+
+    const capitalizedType = type
+      ? type?.charAt(0).toUpperCase() + type?.slice(1).toLowerCase()
       : null;
-
-    const type = searchParams.get('type');
-
-    const hasLogo = searchParams.has('logo');
-    const logo = hasLogo ? searchParams.get('logo')?.slice(0, 100) : sponsorImg;
-
-    const hasReward = searchParams.has('reward');
-    const reward = hasReward
-      ? Number(searchParams.get('reward')).toLocaleString(undefined, {
-          maximumFractionDigits: 2,
-        })
-      : null;
-
-    const hasSponsor = searchParams.has('sponsor');
-    const sponsor = hasSponsor
-      ? searchParams.get('sponsor')?.slice(0, 100)
-      : null;
-
-    const hasToken = searchParams.has('token');
-    const token = hasToken ? searchParams.get('token')?.slice(0, 100) : null;
-
-    const getTokenIcon = (symbol: any, tokens: any[]): string | undefined => {
-      const itoken = tokens.find((t) => t.tokenSymbol === symbol);
-      return itoken?.icon;
-    };
-
-    const icon = getTokenIcon(token, tokenList);
 
     return new ImageResponse(
       (
@@ -225,7 +229,7 @@ export default async function handler(request: NextRequest) {
                       padding: '12px 60px',
                     }}
                   >
-                    {type === 'permissioned' ? 'Project' : 'Bounty'}
+                    {capitalizedType}
                   </div>
                 )}
                 <div
@@ -248,7 +252,7 @@ export default async function handler(request: NextRequest) {
                       height="64px"
                     />
                   )}
-                  {reward && (
+                  {displayReward && (
                     <div
                       style={{
                         fontSize: 32,
@@ -261,7 +265,7 @@ export default async function handler(request: NextRequest) {
                         display: 'flex',
                       }}
                     >
-                      ${reward}
+                      {displayReward}
                     </div>
                   )}
                   {token && (
@@ -289,7 +293,7 @@ export default async function handler(request: NextRequest) {
         width: 1200,
         height: 630,
         fonts: [{ name: 'var(--font-sans)', data: fontData, style: 'normal' }],
-      }
+      },
     );
   } catch (e: any) {
     console.log(`${e.message}`);

@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getToken } from 'next-auth/jwt';
 
 import {
   type MainSkills,
-  type SubSkillsType,
   SkillList,
+  type SubSkillsType,
 } from '@/interface/skills';
 import { prisma } from '@/prisma';
 
@@ -12,7 +13,7 @@ const uniqueArray = (arr: SubSkillsType[]): SubSkillsType[] => {
 };
 
 const correctSkills = (
-  skillObjArray: { skills: MainSkills; subskills: SubSkillsType[] }[]
+  skillObjArray: { skills: MainSkills; subskills: SubSkillsType[] }[],
 ): { skills: MainSkills; subskills: SubSkillsType[] }[] => {
   const correctedSkills: { skills: MainSkills; subskills: SubSkillsType[] }[] =
     [];
@@ -27,7 +28,7 @@ const correctSkills = (
     }
     skillObj.subskills.forEach((subskill) => {
       const correctMainSkill = SkillList.find((s) =>
-        s.subskills.includes(subskill)
+        s.subskills.includes(subskill),
       );
 
       if (correctMainSkill) {
@@ -47,19 +48,44 @@ const correctSkills = (
 };
 
 export default async function user(req: NextApiRequest, res: NextApiResponse) {
-  const { id, addUserSponsor, memberType, skills, ...updateAttributes } =
-    req.body;
+  const token = await getToken({ req });
+
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const userId = token.id;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'Invalid token' });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId as string,
+    },
+  });
+
+  // eslint-disable-next-line
+  const { role, skills, currentSponsorId, ...updateAttributes } = req.body;
   let result;
   const correctedSkills = skills ? correctSkills(skills) : [];
   try {
     const updatedData = {
       ...updateAttributes,
-      skills: correctedSkills,
     };
+
+    if (skills) {
+      updatedData.skills = correctedSkills;
+    }
+
+    if (user && user.role === 'GOD' && currentSponsorId) {
+      updatedData.currentSponsorId = currentSponsorId;
+    }
 
     result = await prisma.user.update({
       where: {
-        id,
+        id: userId as string,
       },
       data: updatedData,
       include: {
@@ -67,20 +93,11 @@ export default async function user(req: NextApiRequest, res: NextApiResponse) {
       },
     });
 
-    if (addUserSponsor && updateAttributes?.currentSponsorId) {
-      await prisma.userSponsors.create({
-        data: {
-          userId: id,
-          sponsorId: updateAttributes?.currentSponsorId,
-          role: memberType,
-        },
-      });
-    }
-    res.status(200).json(result);
+    return res.status(200).json(result);
   } catch (e) {
-    console.log('file: update.ts:29 ~ user ~ e:', e);
-    res.status(400).json({
-      message: `Error occurred while updating user ${id}.`,
+    console.log('file: update.ts:93 ~ user ~ e:', e);
+    return res.status(400).json({
+      message: `Error occurred while updating user ${userId}.`,
     });
   }
 }

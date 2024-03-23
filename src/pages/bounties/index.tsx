@@ -1,12 +1,9 @@
-import { Box, Flex } from '@chakra-ui/react';
+import { Box } from '@chakra-ui/react';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 
-import { BountiesCard, ListingSection } from '@/components/misc/listingsCard';
-import { EmptySection } from '@/components/shared/EmptySection';
-import { Loading } from '@/components/shared/Loading';
-import type { Bounty } from '@/interface/bounty';
+import { type Bounty, ListingTabs } from '@/features/listings';
 import { Home } from '@/layouts/Home';
 import { Meta } from '@/layouts/Meta';
 
@@ -14,7 +11,7 @@ interface Listings {
   bounties?: Bounty[];
 }
 
-function AllBountiesPage() {
+export default function BountiesPage() {
   const [isListingsLoading, setIsListingsLoading] = useState(true);
   const [listings, setListings] = useState<Listings>({
     bounties: [],
@@ -27,8 +24,7 @@ function AllBountiesPage() {
       const listingsData = await axios.get('/api/listings/', {
         params: {
           category: 'bounties',
-          take: 100,
-          type: 'open',
+          type: 'bounty',
           deadline: date,
         },
       });
@@ -53,47 +49,16 @@ function AllBountiesPage() {
       />
 
       <Box w={'100%'}>
-        <ListingSection
-          type="bounties"
-          title="Bounties"
-          sub="Competitive tasks where the best submissions win"
+        <ListingTabs
+          bounties={listings.bounties}
+          isListingsLoading={isListingsLoading}
           emoji="/assets/home/emojis/moneyman.png"
-          all
-        >
-          {isListingsLoading && (
-            <Flex align="center" justify="center" direction="column" minH={52}>
-              <Loading />
-            </Flex>
-          )}
-          {!isListingsLoading && !listings?.bounties?.length && (
-            <Flex align="center" justify="center" mt={8}>
-              <EmptySection
-                title="No bounties available!"
-                message="Subscribe to notifications to get notified about new bounties."
-              />
-            </Flex>
-          )}
-          {!isListingsLoading &&
-            listings?.bounties?.map((bounty) => {
-              return (
-                <BountiesCard
-                  slug={bounty?.slug}
-                  rewardAmount={bounty?.rewardAmount}
-                  key={bounty?.id}
-                  sponsorName={bounty?.sponsor?.name}
-                  deadline={bounty?.deadline}
-                  title={bounty?.title}
-                  logo={bounty?.sponsor?.logo}
-                  token={bounty?.token}
-                  type={bounty?.type}
-                  applicationType={bounty.applicationType}
-                />
-              );
-            })}
-        </ListingSection>
+          title="Bounties"
+          take={20}
+          showViewAll
+          viewAllLink="/bounties/all"
+        />
       </Box>
     </Home>
   );
 }
-
-export default AllBountiesPage;

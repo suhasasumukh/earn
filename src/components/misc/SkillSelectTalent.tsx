@@ -1,11 +1,13 @@
 import { Flex, FormControl, FormLabel, Image, Tooltip } from '@chakra-ui/react';
-import type { Dispatch, SetStateAction } from 'react';
-import React, { useState } from 'react';
+import React, { type Dispatch, type SetStateAction, useState } from 'react';
 import ReactSelect from 'react-select';
 import makeAnimated from 'react-select/animated';
 
-import type { MultiSelectOptions } from '../../constants';
-import { MainSkills, skillSubSkillMap } from '../../constants';
+import {
+  MainSkills,
+  type MultiSelectOptions,
+  skillSubSkillMap,
+} from '@/constants';
 
 interface Props {
   skills: MultiSelectOptions[];
@@ -27,11 +29,12 @@ export const SkillSelect = ({
 }: Props) => {
   const animatedComponents = makeAnimated();
   const [subSkillOptions, setSubSkillOptions] = useState<MultiSelectOptions[]>(
-    []
+    [],
   );
   const handleChange = (e: MultiSelectOptions[]) => {
     const sub: MultiSelectOptions[] = [];
     e.forEach((op) => {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       sub.push(...(skillSubSkillMap[op.value as any] as any));
     });

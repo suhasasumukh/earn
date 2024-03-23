@@ -42,6 +42,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# prisma migration
+prisma/migrations
+
 # local folder
 local
 
@@ -49,3 +52,19 @@ local
 .vercel
 
 /public/assets/data
+
+# Sentry Config File
+.sentryclirc
+
+
+#next-pwa
+**/public/precache.*.*.js
+**/public/sw.js
+**/public/workbox-*.js
+**/public/worker-*.js
+**/public/fallback-*.js
+**/public/precache.*.*.js.map
+**/public/sw.js.map
+**/public/workbox-*.js.map
+**/public/worker-*.js.map
+**/public/fallback-*.js

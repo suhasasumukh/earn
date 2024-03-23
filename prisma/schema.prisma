@@ -44,16 +44,13 @@ model Bounties {
   title                String
   slug                 String             @unique
   description          String?            @db.Text
-  requirements         String?            @db.Text
   deadline             DateTime?
   eligibility          Json?
-  references           Json?
   status               status             @default(OPEN)
   token                String?
   rewardAmount         Int?
   rewards              Json?
   sponsorId            String
-  region               Regions            @default(GLOBAL)
   pocId                String
   source               Source             @default(NATIVE)
   sourceDetails        Json?
@@ -64,27 +61,40 @@ model Bounties {
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   applicationLink      String?
-  applicationType      ApplicationType    @default(fixed)
   skills               Json?
-  totalWinnersSelected Int?               @default(0)
+  type                 BountyType         @default(bounty)
+  requirements         String?            @db.Text
   totalPaymentsMade    Int?               @default(0)
+  totalWinnersSelected Int?               @default(0)
   isWinnersAnnounced   Boolean            @default(false)
   templateId           String?
+  region               Regions            @default(GLOBAL)
+  pocSocials           String?
+  hackathonprize       Boolean            @default(false)
+  applicationType      ApplicationType    @default(fixed)
+  timeToComplete       String?
+  references           Json?
+  winners              Json?
+  referredBy           String?
+  publishedAt          DateTime?
+  isPrivate            Boolean            @default(false)
   template             BountiesTemplates? @relation(fields: [templateId], references: [id])
-  type                 BountyType         @default(open)
   sponsor              Sponsors           @relation(fields: [sponsorId], references: [id])
   poc                  User               @relation("poc", fields: [pocId], references: [id])
-  pocSocials           String?
   Submission           Submission[]
   SubscribeBounty      SubscribeBounty[]
-  timeToComplete       String?
-  hackathonprize       Boolean            @default(false)
-  winners              Json?
+  hackathonId          String?
+  Hackathon            Hackathon?         @relation(fields: [hackathonId], references: [id])
+  usdValue             Int?
+  compensationType     CompensationType   @default(fixed)
+  minRewardAsk         Int?
+  maxRewardAsk         Int?
 
   @@index([id, slug])
   @@index([sponsorId])
   @@index([pocId])
   @@index([templateId])
+  @@index([hackathonId])
 }
 
 model BountiesTemplates {
@@ -108,7 +118,7 @@ model BountiesTemplates {
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
   skills              Json?
-  type                BountyType @default(open)
+  type                BountyType @default(bounty)
   Bounties            Bounties[]
 
   @@index([id])
@@ -137,9 +147,9 @@ model Grants {
   description      String?  @db.Text
   shortDescription String?  @db.VarChar(1000)
   token            String?
-  logo             String?
   rewardAmount     Int?
   link             String?
+  region           Regions  @default(GLOBAL)
   source           Source   @default(NATIVE)
   sponsorId        String
   pocId            String
@@ -150,6 +160,7 @@ model Grants {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   skills           Json?
+  logo             String?
   sponsor          Sponsors @relation(fields: [sponsorId], references: [id])
   poc              User     @relation(fields: [pocId], references: [id])
 
@@ -159,26 +170,27 @@ model Grants {
 }
 
 model Submission {
-  id                 String      @id @default(uuid())
-  link               String?     @db.VarChar(500)
-  tweet              String?     @db.VarChar(500)
-  otherInfo          String?     @db.VarChar(2000)
+  id                 String           @id @default(uuid())
+  link               String?          @db.VarChar(500)
+  tweet              String?          @db.VarChar(500)
   eligibilityAnswers Json?
   userId             String
-  listingType        ListingType @default(BOUNTY)
   listingId          String
-  listing            Bounties    @relation(fields: [listingId], references: [id])
-  isWinner           Boolean     @default(false)
+  isWinner           Boolean          @default(false)
   winnerPosition     String?
-  isPaid             Boolean     @default(false)
-  paymentDetails     Json?
-  isActive           Boolean     @default(true)
-  isArchived         Boolean     @default(false)
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+  isActive           Boolean          @default(true)
+  isArchived         Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
   like               Json?
   likes              Int?
-  user               User        @relation(fields: [userId], references: [id])
+  isPaid             Boolean          @default(false)
+  paymentDetails     Json?
+  otherInfo          String?          @db.VarChar(2000)
+  listing            Bounties         @relation(fields: [listingId], references: [id])
+  user               User             @relation(fields: [userId], references: [id])
+  ask                Int?
+  label              SubmissionLabels @default(Unreviewed)
 
   @@index([id, listingId])
   @@index([userId])
@@ -193,84 +205,112 @@ model Otp {
 }
 
 model Sponsors {
-  id           String         @id @default(uuid())
-  name         String         @unique
-  slug         String         @unique
-  logo         String?
-  url          String?
-  industry     String
-  twitter      String?
-  bio          String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  isArchived   Boolean        @default(false)
-  isActive     Boolean        @default(true)
-  UserSponsors UserSponsors[]
-  Bounties     Bounties[]
-  Grants       Grants[]
-  Jobs         Jobs[]
-  User         User[]
+  id                 String         @id @default(uuid())
+  name               String         @unique
+  slug               String         @unique
+  logo               String?
+  url                String?
+  industry           String
+  twitter            String?
+  bio                String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  isArchived         Boolean        @default(false)
+  isActive           Boolean        @default(true)
+  totalRewardedInUSD Int            @default(0)
+  Hackathon          Hackathon?
+  UserSponsors       UserSponsors[]
+  Bounties           Bounties[]
+  Grants             Grants[]
+  Jobs               Jobs[]
+  User               User[]
 
   @@index([id, slug])
 }
 
-model Total {
-  id         String   @id @default(uuid())
-  total      Int?
-  totalInUSD Int?
-  count      Int?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([id])
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model User {
-  id               String            @id @default(uuid())
-  publicKey        String            @unique
-  email            String            @unique
-  username         String            @unique
-  photo            String?
-  firstName        String?
-  lastName         String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  isVerified       Boolean           @default(false)
-  role             SuperRole         @default(USER)
-  totalEarnedInUSD Int               @default(0)
-  isTalentFilled   Boolean           @default(false)
-  interests        String?
-  bio              String?
-  twitter          String?
-  discord          String?
-  github           String?
-  linkedin         String?
-  website          String?
-  telegram         String?
-  community        String?
-  experience       String?
-  superteamLevel   String?
-  location         String?
-  cryptoExperience String?
-  workPrefernce    String?
-  currentEmployer  String?
-  pow              String?           @db.VarChar(2000)
-  notifications    Json?
-  private          Boolean           @default(false)
-  skills           Json?
-  currentSponsorId String?
-  currentSponsor   Sponsors?         @relation(fields: [currentSponsorId], references: [id])
-  UserSponsors     UserSponsors[]
-  poc              Bounties[]        @relation("poc")
-  Comment          Comment[]
-  Submission       Submission[]
-  Grants           Grants[]
-  UserInvites      UserInvites[]
-  SubscribeBounty  SubscribeBounty[]
-  PoW              PoW[]
+  id                String            @id @default(uuid())
+  publicKey         String?
+  email             String            @unique
+  username          String?           @unique
+  photo             String?
+  firstName         String?
+  lastName          String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  isVerified        Boolean           @default(false)
+  role              String            @default("USER")
+  totalEarnedInUSD  Int               @default(0)
+  isTalentFilled    Boolean           @default(false)
+  interests         String?
+  bio               String?
+  twitter           String?
+  discord           String?
+  github            String?
+  linkedin          String?
+  website           String?
+  telegram          String?
+  community         String?
+  experience        String?
+  superteamLevel    String?
+  location          String?
+  cryptoExperience  String?
+  workPrefernce     String?
+  currentEmployer   String?
+  pow               String?           @db.VarChar(2000)
+  notifications     Json?
+  private           Boolean           @default(false)
+  skills            Json?
+  currentSponsorId  String?
+  currentSponsor    Sponsors?         @relation(fields: [currentSponsorId], references: [id])
+  UserSponsors      UserSponsors[]
+  poc               Bounties[]        @relation("poc")
+  Comment           Comment[]
+  Submission        Submission[]
+  Grants            Grants[]
+  UserInvites       UserInvites[]
+  SubscribeBounty   SubscribeBounty[]
+  PoW               PoW[]
+  accounts          Account[]
+  sessions          Session[]
+  emailVerified     DateTime?
+  Hackathon         Hackathon?        @relation(fields: [hackathonId], references: [id])
+  hackathonId       String?
+  featureModalShown Boolean           @default(false)
+  emailSettings     EmailSettings[]
 
   @@index([email, publicKey, username])
   @@index([currentSponsorId])
+  @@index([hackathonId])
 }
 
 model PoW {
@@ -279,13 +319,31 @@ model PoW {
   title       String
   description String   @db.Text
   skills      Json?
-  subSkills   Json?
   link        String
   createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id])
+  subSkills   Json?
   updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+model UserEmailType {
+  id            Int             @id @default(autoincrement())
+  name          String
+  emailSettings EmailSettings[]
+}
+
+model EmailSettings {
+  id           Int           @id @default(autoincrement())
+  isSubscribed Boolean
+  user         User          @relation(fields: [userId], references: [id])
+  userId       String
+  emailType    UserEmailType @relation(fields: [emailTypeId], references: [id])
+  emailTypeId  Int
+
+  @@index([userId])
+  @@index([emailTypeId])
 }
 
 model UserSponsors {
@@ -306,11 +364,11 @@ model UserInvites {
   id         String   @id @default(uuid())
   email      String
   senderId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
   sponsorId  String
   memberType Role     @default(MEMBER)
   sender     User     @relation(fields: [senderId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 
   @@index([id])
   @@index([senderId])
@@ -339,6 +397,33 @@ model SubscribeBounty {
   @@index([userId])
 }
 
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Hackathon {
+  id           String     @id @default(uuid())
+  slug         String     @unique
+  name         String
+  logo         String
+  altLogo      String?
+  description  String
+  listings     Bounties[]
+  sponsorId    String?    @unique
+  startDate    DateTime?
+  deadline     DateTime?
+  announceDate DateTime?
+  eligibility  Json?
+  Sponsor      Sponsors?  @relation(fields: [sponsorId], references: [id])
+  User         User[]
+
+  @@index([sponsorId])
+}
+
 enum EmailType {
   BOUNTY_REVIEW
   BOUNTY_DEADLINE
@@ -353,11 +438,6 @@ enum EmailType {
 enum Role {
   ADMIN
   MEMBER
-}
-
-enum SuperRole {
-  GOD
-  USER
 }
 
 enum Source {
@@ -377,14 +457,14 @@ enum status {
 }
 
 enum BountyType {
-  permissioned
-  open
+  bounty
+  project
+  hackathon
 }
 
 enum ListingType {
   BOUNTY
-  JOB
-  GRANT
+  SUBMISSION
 }
 
 enum JobType {
@@ -405,4 +485,20 @@ enum Regions {
   NIGERIA
   ISRAEL
   BRAZIL
+  MALAYSIA
+  BALKAN
+  PHILIPPINES
+}
+
+enum CompensationType {
+  fixed
+  range
+  variable
+}
+
+enum SubmissionLabels {
+  Unreviewed
+  Reviewed
+  Shortlisted
+  Spam
 }

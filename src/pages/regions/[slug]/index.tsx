@@ -3,16 +3,11 @@ import axios from 'axios';
 import type { NextPageContext } from 'next';
 import React, { useEffect, useState } from 'react';
 
-import {
-  BountiesCard,
-  GrantsCard,
-  ListingSection,
-} from '@/components/misc/listingsCard';
 import { EmptySection } from '@/components/shared/EmptySection';
 import { Loading } from '@/components/shared/Loading';
 import { Superteams } from '@/constants/Superteam';
-import type { Bounty } from '@/interface/bounty';
-import type { Grant } from '@/interface/grant';
+import { type Grant, GrantsCard } from '@/features/grants';
+import { type Bounty, ListingSection, ListingTabs } from '@/features/listings';
 import { Home } from '@/layouts/Home';
 import { Meta } from '@/layouts/Meta';
 
@@ -20,7 +15,13 @@ interface Listings {
   bounties?: Bounty[];
   grants?: Grant[];
 }
-const RegionsPage = ({ slug }: { slug: string }) => {
+const RegionsPage = ({
+  slug,
+  displayName,
+}: {
+  slug: string;
+  displayName: string;
+}) => {
   const [isListingsLoading, setIsListingsLoading] = useState(true);
   const [listings, setListings] = useState<Listings>({
     bounties: [],
@@ -31,7 +32,7 @@ const RegionsPage = ({ slug }: { slug: string }) => {
     setIsListingsLoading(true);
     try {
       const listingsData = await axios.get(
-        `/api/listings/regions/?region=${slug}`
+        `/api/listings/regions/?region=${slug}`,
       );
       setListings(listingsData.data);
       setIsListingsLoading(false);
@@ -47,71 +48,31 @@ const RegionsPage = ({ slug }: { slug: string }) => {
     getListings();
   }, []);
 
-  const formattedSlug =
-    slug === 'uk' || slug === 'uae'
-      ? slug.toUpperCase()
-      : slug.charAt(0).toUpperCase() + slug.slice(1);
-
   return (
     <>
       <Home type="region">
         <Meta
-          title={`Welcome to Superteam Earn ${formattedSlug} | Discover Bounties and Grants`}
-          description={`Welcome to Superteam ${formattedSlug}'s page — Discover bounties and grants and become a part of the global crypto community`}
+          title={`Welcome to Superteam Earn ${displayName} | Discover Bounties and Grants`}
+          description={`Welcome to Superteam ${displayName}'s page — Discover bounties and grants and become a part of the global crypto community`}
           canonical={`https://earn.superteam.fun/regions/${slug}/`}
-        ></Meta>
+        />
         <Box w={'100%'}>
-          <ListingSection
-            type="bounties"
-            title="Freelance Gigs"
-            sub="Bite sized tasks for freelancers"
+          <ListingTabs
+            bounties={listings.bounties}
+            isListingsLoading={isListingsLoading}
             emoji="/assets/home/emojis/moneyman.png"
-            url={`/regions/${slug}/bounties`}
-            all
-          >
-            {isListingsLoading && (
-              <Flex
-                align="center"
-                justify="center"
-                direction="column"
-                minH={52}
-              >
-                <Loading />
-              </Flex>
-            )}
-            {!isListingsLoading && !listings?.bounties?.length && (
-              <Flex align="center" justify="center" mt={8}>
-                <EmptySection
-                  title="No bounties available!"
-                  message="Subscribe to notifications to get notified about new bounties."
-                />
-              </Flex>
-            )}
-            {!isListingsLoading &&
-              listings?.bounties?.map((bounty) => {
-                return (
-                  <BountiesCard
-                    slug={bounty.slug}
-                    rewardAmount={bounty?.rewardAmount}
-                    key={bounty?.id}
-                    sponsorName={bounty?.sponsor?.name}
-                    deadline={bounty?.deadline}
-                    title={bounty?.title}
-                    logo={bounty?.sponsor?.logo}
-                    token={bounty?.token}
-                    type={bounty?.type}
-                    applicationType={bounty.applicationType}
-                  />
-                );
-              })}
-          </ListingSection>
+            title="Freelance Gigs"
+            showViewAll
+            viewAllLink={`/regions/${slug}/all`}
+            take={10}
+          />
 
           <ListingSection
             type="grants"
             title="Grants"
             sub="Equity-free funding opportunities for builders"
             emoji="/assets/home/emojis/grants.png"
-            all
+            showViewAll
           >
             {isListingsLoading && (
               <Flex
@@ -133,17 +94,7 @@ const RegionsPage = ({ slug }: { slug: string }) => {
             )}
             {!isListingsLoading &&
               listings?.grants?.map((grant) => {
-                return (
-                  <GrantsCard
-                    sponsorName={grant?.sponsor?.name}
-                    logo={grant?.sponsor?.logo}
-                    key={grant?.id}
-                    slug={grant.slug}
-                    rewardAmount={grant?.rewardAmount}
-                    title={grant?.title}
-                    short_description={grant?.shortDescription}
-                  />
-                );
+                return <GrantsCard grant={grant} key={grant.id} />;
               })}
           </ListingSection>
         </Box>
@@ -155,8 +106,11 @@ const RegionsPage = ({ slug }: { slug: string }) => {
 export async function getServerSideProps(context: NextPageContext) {
   const { slug } = context.query;
 
+  const st = Superteams.find((team) => team.region.toLowerCase() === slug);
+  const displayName = st?.displayValue;
+
   const validRegion = Superteams.some(
-    (team) => team.region.toLowerCase() === (slug as string).toLowerCase()
+    (team) => team.region.toLowerCase() === (slug as string).toLowerCase(),
   );
 
   if (!validRegion) {
@@ -166,7 +120,7 @@ export async function getServerSideProps(context: NextPageContext) {
   }
 
   return {
-    props: { slug },
+    props: { slug, displayName },
   };
 }
 

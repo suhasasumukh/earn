@@ -10,29 +10,27 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { useWallet } from '@solana/wallet-adapter-react';
 import axios from 'axios';
 import { MediaPicker } from 'degen';
 import { useRouter } from 'next/router';
-import { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Toaster } from 'react-hot-toast';
 import Select from 'react-select';
 import makeAnimated from 'react-select/animated';
 
+import { SignIn } from '@/components/modals/Login/SignIn';
+import { IndustryList } from '@/constants';
+import type { SponsorType } from '@/interface/sponsor';
 import { Default } from '@/layouts/Default';
 import { Meta } from '@/layouts/Meta';
 import { userStore } from '@/store/user';
-
-import { IndustryList } from '../../constants';
-import type { SponsorType } from '../../interface/sponsor';
-import { uploadToCloudinary } from '../../utils/upload';
+import { uploadToCloudinary } from '@/utils/upload';
 
 const CreateSponsor = () => {
   const router = useRouter();
   const animatedComponents = makeAnimated();
-  const { connected } = useWallet();
-  const { userInfo } = userStore();
+  const { data: session, status } = useSession();
   const {
     handleSubmit,
     register,
@@ -45,6 +43,15 @@ const CreateSponsor = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [loginStep, setLoginStep] = useState(0);
+
+  const { userInfo } = userStore();
+
+  useEffect(() => {
+    if (userInfo?.currentSponsorId && session?.user?.role !== 'GOD') {
+      router.push('/dashboard/listings');
+    }
+  }, [userInfo?.currentSponsorId, router]);
 
   const createNewSponsor = async (sponsor: SponsorType) => {
     if (getValues('bio').length > 180) {
@@ -56,15 +63,9 @@ const CreateSponsor = () => {
     try {
       await axios.post('/api/sponsors/create', {
         ...sponsor,
-        userId: userInfo?.id,
       });
-      await axios.post(`/api/email/manual/welcomeSponsor`, {
-        email: userInfo?.email,
-        name: userInfo?.firstName,
-      });
-      router.push('/dashboard/bounties');
-      // setIsLoading(false);
-      // toast.success('Sponsor created!');
+      await axios.post(`/api/email/manual/welcomeSponsor`);
+      router.push('/dashboard/listings');
     } catch (e: any) {
       if (e?.response?.data?.error?.code === 'P2002') {
         setErrorMessage('Sorry! Sponsor name or username already exists.');
@@ -73,6 +74,11 @@ const CreateSponsor = () => {
       setHasError(true);
     }
   };
+
+  if (!session && status === 'loading') {
+    return <></>;
+  }
+
   return (
     <Default
       meta={
@@ -83,18 +89,38 @@ const CreateSponsor = () => {
         />
       }
     >
-      {!connected ? (
+      {!session ? (
         <>
-          <Box
-            alignItems={'center'}
-            justifyContent={'center'}
-            display={'flex'}
-            w={'full'}
-            minH={'100vh'}
-          >
-            <Text color={'gray.600'} fontSize={'xl'} fontWeight={500}>
-              Please sign up first!
-            </Text>
+          <Box w={'full'} minH={'100vh'} bg="white">
+            <Box
+              alignItems="center"
+              justifyContent={'center'}
+              flexDir={'column'}
+              display={'flex'}
+              maxW="32rem"
+              minH="60vh"
+              mx="auto"
+            >
+              <Text
+                pt={4}
+                color="brand.slate.900"
+                fontSize={18}
+                fontWeight={600}
+                textAlign={'center'}
+              >
+                You&apos;re one step away
+              </Text>
+              <Text
+                pb={4}
+                color="brand.slate.600"
+                fontSize={15}
+                fontWeight={400}
+                textAlign={'center'}
+              >
+                from joining Superteam Earn
+              </Text>
+              <SignIn loginStep={loginStep} setLoginStep={setLoginStep} />
+            </Box>
           </Box>
         </>
       ) : (
@@ -234,32 +260,34 @@ const CreateSponsor = () => {
                   </FormErrorMessage>
                 </FormControl>
               </HStack>
-              <VStack align={'start'} gap={2} my={3}>
-                <Heading
-                  color={'brand.slate.500'}
-                  fontSize={'15px'}
-                  fontWeight={600}
-                >
-                  Company Logo{' '}
-                  <span
-                    style={{
-                      color: 'red',
-                    }}
+              {process.env.NODE_ENV === 'production' && (
+                <VStack align={'start'} gap={2} my={3}>
+                  <Heading
+                    color={'brand.slate.500'}
+                    fontSize={'15px'}
+                    fontWeight={600}
                   >
-                    *
-                  </span>
-                </Heading>
-                <HStack gap={5}>
-                  <MediaPicker
-                    onChange={async (e) => {
-                      const a = await uploadToCloudinary(e);
-                      setImageUrl(a);
-                    }}
-                    compact
-                    label="Choose or Drag & Drop Media"
-                  />
-                </HStack>
-              </VStack>
+                    Company Logo{' '}
+                    <span
+                      style={{
+                        color: 'red',
+                      }}
+                    >
+                      *
+                    </span>
+                  </Heading>
+                  <HStack gap={5}>
+                    <MediaPicker
+                      onChange={async (e) => {
+                        const a = await uploadToCloudinary(e);
+                        setImageUrl(a);
+                      }}
+                      compact
+                      label="Choose or Drag & Drop Media"
+                    />
+                  </HStack>
+                </VStack>
+              )}
 
               <HStack justify={'space-between'} w={'full'} mt={6}>
                 <FormControl w={'full'} isRequired>
@@ -329,7 +357,6 @@ const CreateSponsor = () => {
                   </FormErrorMessage>
                 </FormControl>
               </Box>
-              <Toaster />
               <Box mt={8}>
                 {hasError && (
                   <Text align="center" mb={4} color="red">
@@ -341,7 +368,9 @@ const CreateSponsor = () => {
                 )}
                 <Button
                   w="full"
-                  isDisabled={imageUrl === ''}
+                  isDisabled={
+                    process.env.NODE_ENV === 'production' && imageUrl === ''
+                  }
                   isLoading={!!isLoading}
                   loadingText="Creating..."
                   size="lg"

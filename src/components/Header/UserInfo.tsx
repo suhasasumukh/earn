@@ -1,5 +1,5 @@
+import { ChevronDownIcon } from '@chakra-ui/icons';
 import {
-  Box,
   Button,
   Flex,
   HStack,
@@ -10,16 +10,16 @@ import {
   MenuGroup,
   MenuItem,
   MenuList,
+  SkeletonCircle,
+  SkeletonText,
   Text,
   useDisclosure,
   useMediaQuery,
 } from '@chakra-ui/react';
-import type { Wallet as SolanaWallet } from '@solana/wallet-adapter-react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import axios from 'axios';
 import Avatar from 'boring-avatars';
+import NextLink from 'next/link';
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 
 import { Login } from '@/components/modals/Login/Login';
 import { userStore } from '@/store/user';
@@ -31,84 +31,33 @@ interface UserInfoProps {
 export function UserInfo({ isMobile }: UserInfoProps) {
   const router = useRouter();
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { connected, publicKey, wallet, wallets, select } = useWallet();
-  const { setUserInfo, userInfo } = userStore();
-  const [initialStep, setInitialStep] = useState<number>(1);
+
+  const { userInfo, logOut } = userStore();
   const [isLessthan768] = useMediaQuery('(max-width: 768px)');
-
-  useEffect(() => {
-    const makeUser = async () => {
-      if (publicKey && connected) {
-        const publicKeyString = publicKey.toBase58() as string;
-        const userDetails = await axios.post('/api/user/', {
-          publicKey: publicKeyString,
-        });
-        if (!userDetails.data) {
-          setUserInfo({ publicKey: publicKeyString });
-        } else if (!userDetails.data.isVerified) {
-          setUserInfo(userDetails.data);
-        } else {
-          setUserInfo(userDetails.data);
-          onClose();
-        }
-      }
-    };
-    makeUser();
-  }, [publicKey, connected]);
-
-  const onConnectWallet = async (solanaWallet: SolanaWallet) => {
-    try {
-      select(solanaWallet.adapter.name);
-    } catch (e) {
-      console.log('Wallet not found');
-    }
-  };
-
-  const onDisconnectWallet = async () => {
-    if (wallet == null) {
-      return;
-    }
-    await wallet.adapter.disconnect();
-    setUserInfo({});
-  };
 
   const displayValue = isMobile
     ? { base: 'block', md: 'none' }
     : { base: 'none', md: 'block' };
 
+  const { data: session, status } = useSession();
+
+  if (status === 'loading' && !session) {
+    return (
+      <Flex align={'center'} gap={2}>
+        <SkeletonCircle size="10" />
+        <SkeletonText display={displayValue} w={'80px'} noOfLines={1} />
+      </Flex>
+    );
+  }
+
   return (
     <>
-      {!!isOpen && (
-        <Login
-          wallets={wallets}
-          onConnectWallet={onConnectWallet}
-          isOpen={isOpen}
-          onClose={onClose}
-          userInfo={userInfo}
-          setUserInfo={setUserInfo}
-          initialStep={initialStep}
-        />
-      )}
-      {connected ? (
+      {!!isOpen && <Login isOpen={isOpen} onClose={onClose} />}
+      {session ? (
         <>
-          {userInfo && !userInfo.isVerified && (
-            <Button
-              display={displayValue}
-              fontSize="xs"
-              onClick={() => {
-                setInitialStep(2);
-                onOpen();
-              }}
-              size="sm"
-              variant={{ base: 'solid', md: 'ghost' }}
-            >
-              Verify your Email
-            </Button>
-          )}
           {userInfo &&
             !userInfo.currentSponsorId &&
-            !userInfo.isTalentFilled &&
-            userInfo.isVerified && (
+            !userInfo.isTalentFilled && (
               <Button
                 display={displayValue}
                 fontSize="xs"
@@ -123,10 +72,22 @@ export function UserInfo({ isMobile }: UserInfoProps) {
             )}
           <Menu>
             <MenuButton
+              as={Button}
               display={isMobile ? 'none' : 'flex'}
               minW={0}
+              px={2}
+              bg={'brand.slate.50'}
+              borderWidth={'1px'}
+              borderColor={'white'}
+              _hover={{ bg: 'brand.slate.100' }}
+              _active={{
+                bg: 'brand.slate.200',
+                borderColor: 'brand.slate.300',
+              }}
               cursor={'pointer'}
-              rounded={'full'}
+              rightIcon={
+                <ChevronDownIcon color="brand.slate.400" boxSize={5} />
+              }
             >
               <Flex align="center">
                 {userInfo?.photo ? (
@@ -145,96 +106,97 @@ export function UserInfo({ isMobile }: UserInfoProps) {
                     variant="marble"
                   />
                 )}
-                <Box display={displayValue} ml={2}>
+                <Flex display={displayValue} ml={2}>
                   {!userInfo?.firstName ? (
                     <Text color="brand.slate.800" fontSize="sm">
                       New User
                     </Text>
                   ) : (
-                    <Text color="brand.slate.800" fontSize="sm">
+                    <Text
+                      color="brand.slate.600"
+                      fontSize="sm"
+                      fontWeight={500}
+                    >
                       {userInfo?.firstName}
                     </Text>
                   )}
-                  <Text color="brand.slate.500" fontSize="xs">
-                    {userInfo?.publicKey?.substring(0, 4)}
-                    ....
-                    {userInfo?.publicKey?.substring(
-                      userInfo.publicKey.length - 4,
-                      userInfo?.publicKey?.length
-                    )}
-                  </Text>
-                </Box>
+                </Flex>
               </Flex>
             </MenuButton>
             <MenuList>
               {userInfo?.isTalentFilled && (
                 <MenuItem
-                  color="brand.slate.500"
+                  as={NextLink}
                   fontSize="sm"
                   fontWeight={600}
-                  onClick={() => {
-                    router.push(`/t/${userInfo?.username}`);
-                  }}
+                  href={`/t/${userInfo?.username}`}
                 >
                   Profile
                 </MenuItem>
               )}
               {userInfo?.isTalentFilled && (
                 <MenuItem
+                  as={NextLink}
                   color="brand.slate.500"
                   fontSize="sm"
                   fontWeight={600}
-                  onClick={() => {
-                    router.push(`/t/${userInfo?.username}/edit`);
-                  }}
+                  href={`/t/${userInfo?.username}/edit`}
                 >
                   Edit Profile
                 </MenuItem>
               )}
-              {!isLessthan768 &&
-                (userInfo?.role === 'GOD' || !!userInfo?.currentSponsorId) && (
+              {!isLessthan768 && !!userInfo?.currentSponsorId && (
+                <>
                   <MenuItem
+                    as={NextLink}
                     color="brand.slate.500"
                     fontSize="sm"
                     fontWeight={600}
-                    onClick={() => {
-                      router.push('/dashboard/bounties');
-                    }}
+                    href={'/dashboard/listings'}
                   >
                     Sponsor Dashboard
                   </MenuItem>
-                )}
-              {!isLessthan768 && userInfo?.role === 'GOD' && (
-                <>
                   <MenuDivider />
+                </>
+              )}
+              {!isLessthan768 && session?.user?.role === 'GOD' && (
+                <>
                   <MenuGroup
+                    mb={0}
                     ml={3}
-                    color="brand.slate.700"
+                    color="brand.slate.400"
                     fontSize="xs"
-                    fontWeight={700}
+                    fontWeight={500}
                     title="God Mode"
                   >
                     <MenuItem
+                      as={NextLink}
                       color="brand.slate.500"
                       fontSize="sm"
                       fontWeight={600}
-                      onClick={() => {
-                        router.push('/new/sponsor');
-                      }}
+                      href={'/new/sponsor'}
                     >
                       Create New Sponsor
                     </MenuItem>
                   </MenuGroup>
+                  <MenuDivider />
                 </>
               )}
-              <MenuDivider />
+              <MenuItem
+                color="brand.slate.500"
+                fontSize="sm"
+                fontWeight={600}
+                onClick={() =>
+                  window.open('https://discord.com/invite/Mq3ReaekgG', '_blank')
+                }
+              >
+                Get Help
+              </MenuItem>
               <MenuItem
                 color="red.500"
                 fontSize="sm"
                 fontWeight={600}
-                onClick={() => {
-                  onDisconnectWallet();
-                }}
+                onClick={() => logOut()}
               >
                 Logout
               </MenuItem>
@@ -247,12 +209,13 @@ export function UserInfo({ isMobile }: UserInfoProps) {
             <HStack gap={0} w={{ base: '100%', md: 'auto' }}>
               <Button
                 display={isMobile ? 'none' : { base: 'none', md: 'block' }}
+                color="#6366F1"
                 fontSize="xs"
+                bg={'white'}
                 onClick={() => {
                   router.push('/sponsor');
                 }}
                 size="sm"
-                variant={{ base: 'solid', md: 'ghost' }}
               >
                 Create A Listing
               </Button>
@@ -272,6 +235,7 @@ export function UserInfo({ isMobile }: UserInfoProps) {
             <Button
               display={displayValue}
               w={{ base: '100%' }}
+              my={1}
               px={4}
               fontSize="xs"
               onClick={() => {

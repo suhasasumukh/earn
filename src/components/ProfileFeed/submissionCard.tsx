@@ -12,9 +12,8 @@ import {
 } from '@chakra-ui/react';
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
-import { AiFillHeart } from 'react-icons/ai';
 import { BiComment } from 'react-icons/bi';
+import { IoMdHeart } from 'react-icons/io';
 
 import { tokenList } from '@/constants';
 import { PrizeListMap } from '@/interface/listings';
@@ -36,7 +35,7 @@ export function SubmissionCard({
   const { userInfo } = userStore();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isLiked, setIsLiked] = useState<boolean>(
-    !!sub?.like?.find((e: any) => e.id === userInfo?.id)
+    !!sub?.like?.find((e: any) => e.id === userInfo?.id),
   );
   const [totalLikes, setTotalLikes] = useState<number>(sub?.like?.length ?? 0);
 
@@ -45,26 +44,18 @@ export function SubmissionCard({
       setIsLoading(true);
       await axios.post('/api/submission/like', {
         submissionId: sub?.id,
-        userId: userInfo?.id,
       });
       if (isLiked) {
         setIsLiked(false);
         setTotalLikes((prevLikes) => Math.max(prevLikes - 1, 0));
-        toast.success('Like removed from submission');
       } else {
         setIsLiked(true);
         setTotalLikes((prevLikes) => prevLikes + 1);
-        await axios.post(`/api/email/manual/submissionLike`, {
-          id: sub?.id,
-          userId: userInfo?.id,
-        });
-        toast.success('Liked submission');
       }
       setIsLoading(false);
     } catch (error) {
       setIsLoading(false);
       console.log(error);
-      toast.error('Error while liking submission');
     }
   };
 
@@ -73,6 +64,32 @@ export function SubmissionCard({
   }, [sub.like, userInfo?.id]);
 
   const breakpoint = useBreakpointValue({ base: 'base', md: 'md' });
+
+  const isProject = sub?.listing?.type === 'project';
+
+  const listingLink = `${getURL()}listings/${sub?.listing?.type}/${
+    sub?.listing?.slug
+  }`;
+
+  const submissionLink = `${listingLink}/submission/${sub?.id}`;
+
+  let winningText;
+  let submissionText;
+
+  switch (sub?.listing?.type) {
+    case 'bounty':
+      winningText = 'won a bounty';
+      submissionText = 'submitted to a bounty';
+      break;
+    case 'hackathon':
+      winningText = 'won a hackathon track';
+      submissionText = 'submitted to a hackathon';
+      break;
+    case 'project':
+      winningText = 'got selected for a project';
+      submissionText = 'applied to a project';
+      break;
+  }
 
   return (
     <Box my={'16'}>
@@ -92,13 +109,9 @@ export function SubmissionCard({
               {talent?.firstName} {talent?.lastName}
             </Text>{' '}
             {sub?.isWinner && sub?.listing?.isWinnersAnnounced ? (
-              <Text as={'span'}>
-                {sub?.listing?.type === 'open'
-                  ? 'won a bounty'
-                  : 'got selected for a project'}
-              </Text>
+              <Text as={'span'}>{winningText}</Text>
             ) : (
-              <Text as={'span'}>submitted to a bounty</Text>
+              <Text as={'span'}>{submissionText}</Text>
             )}
           </Text>
         </Flex>
@@ -146,7 +159,7 @@ export function SubmissionCard({
                 alt={`${sub?.listing?.token} icon`}
                 src={
                   tokenList.find(
-                    (token) => token.tokenSymbol === sub?.listing?.token
+                    (token) => token.tokenSymbol === sub?.listing?.token,
                   )?.icon || ''
                 }
               />
@@ -209,18 +222,14 @@ export function SubmissionCard({
             display="flex"
             whiteSpace={'nowrap'}
           >
-            <LinkOverlay
-              href={`${getURL()}listings/bounties/${
-                sub?.listing?.slug
-              }/submission/${sub?.id}`}
-            >
+            <LinkOverlay href={isProject ? listingLink : submissionLink}>
               <Text
                 as="span"
                 color={'#6366F1'}
                 fontSize={{ base: 'sm', md: 'md' }}
                 fontWeight={600}
               >
-                View Submission
+                {isProject ? 'View Listing' : 'View Submission'}
               </Text>
             </LinkOverlay>
             <ArrowForwardIcon color={'#6366F1'} />
@@ -242,21 +251,18 @@ export function SubmissionCard({
           }}
           variant={'unstyled'}
         >
-          <AiFillHeart color={!isLiked ? '#94A3B8' : '#FF005C'} />
+          <IoMdHeart color={!isLiked ? '#CBD5E1' : '#FF005C'} />
           {totalLikes}
         </Button>
         <BiComment
-          color={'#94A3B8'}
+          color={'#CBD5E1'}
           style={{
             transform: 'scaleX(-1)',
             marginTop: '2px',
             cursor: 'pointer',
           }}
           onClick={() => {
-            const submissionUrl = `${getURL()}listings/bounties/${
-              sub?.listing?.slug
-            }/submission/${sub?.id}`;
-            window.location.href = submissionUrl;
+            window.location.href = isProject ? listingLink : submissionLink;
           }}
         />
       </Flex>

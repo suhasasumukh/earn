@@ -9,8 +9,10 @@ import {
   Text,
   VisuallyHidden,
 } from '@chakra-ui/react';
+import NextLink from 'next/link';
 import type { ReactNode } from 'react';
 
+import { Superteams } from '@/constants/Superteam';
 import { getURL } from '@/utils/validUrl';
 
 const getCurrentYear = () => {
@@ -19,14 +21,16 @@ const getCurrentYear = () => {
 
 const Logo = (props: any) => {
   return (
-    <Image
-      h={8}
-      cursor="pointer"
-      objectFit={'contain'}
-      alt={'Superteam Earn'}
-      src={'/assets/logo/new-logo.svg'}
-      {...props}
-    />
+    <Link as={NextLink} href="/">
+      <Image
+        h={8}
+        cursor="pointer"
+        objectFit={'contain'}
+        alt={'Superteam Earn'}
+        src={'/assets/logo/logo.svg'}
+        {...props}
+      />
+    </Link>
   );
 };
 
@@ -154,100 +158,47 @@ export const Footer = () => {
           </Stack>
           <Stack align={'flex-start'}>
             <ListHeader>All Superteams</ListHeader>
-            <Link
-              color="brand.slate.500"
-              _hover={{
-                color: 'brand.slate.800',
-              }}
-              href={`${getURL()}regions/india`}
-              isExternal
-            >
-              India
-            </Link>
-            <Link
-              color="brand.slate.500"
-              _hover={{
-                color: 'brand.slate.800',
-              }}
-              href={`${getURL()}regions/germany`}
-              isExternal
-            >
-              Germany
-            </Link>
-            <Link
-              color="brand.slate.500"
-              _hover={{
-                color: 'brand.slate.800',
-              }}
-              href={`${getURL()}regions/mexico`}
-              isExternal
-            >
-              Mexico
-            </Link>
-            <Link
-              color="brand.slate.500"
-              _hover={{
-                color: 'brand.slate.800',
-              }}
-              href={`${getURL()}regions/turkey`}
-              isExternal
-            >
-              Turkey
-            </Link>
-            <Link
-              color="brand.slate.500"
-              _hover={{
-                color: 'brand.slate.800',
-              }}
-              href={`${getURL()}regions/vietnam`}
-              isExternal
-            >
-              Vietnam
-            </Link>
-            <Link
-              color="brand.slate.500"
-              _hover={{
-                color: 'brand.slate.800',
-              }}
-              href={`${getURL()}regions/uk`}
-              isExternal
-            >
-              UK
-            </Link>
-            <Link
-              color="brand.slate.500"
-              _hover={{
-                color: 'brand.slate.800',
-              }}
-              href={`${getURL()}regions/uae`}
-              isExternal
-            >
-              UAE
-            </Link>
-            <Link
-              color="brand.slate.500"
-              _hover={{
-                color: 'brand.slate.800',
-              }}
-              href={`${getURL()}regions/nigeria`}
-              isExternal
-            >
-              Nigeria
-            </Link>
-            <Link
-              color="brand.slate.500"
-              _hover={{
-                color: 'brand.slate.800',
-              }}
-              href={`${getURL()}regions/brazil`}
-              isExternal
-            >
-              Brazil
-            </Link>
+            {Superteams.map((st) => (
+              <Link
+                key={st.region}
+                as={NextLink}
+                color="brand.slate.500"
+                _hover={{
+                  color: 'brand.slate.800',
+                }}
+                href={`${getURL()}regions/${st.region.toLowerCase()}`}
+                isExternal
+              >
+                {st.displayValue}
+              </Link>
+            ))}
           </Stack>
           <Stack align={'flex-start'}>
+            <Link
+              mb={{ base: 6, md: 2 }}
+              color={'brand.slate.500'}
+              fontSize={'lg'}
+              fontWeight={'700'}
+              href="https://superteamdao.notion.site/Superteam-Earn-FAQ-aedaa039b25741b1861167d68aa880b1?pvs=4"
+              isExternal
+            >
+              FAQ
+            </Link>
+
+            <Link
+              mb={{ base: 6, md: 2 }}
+              color={'brand.slate.500'}
+              fontSize={'lg'}
+              fontWeight={'700'}
+              href="https://superteamdao.notion.site/Superteam-Earn-Changelog-faf0c85972a742699ecc07a52b569827"
+              isExternal
+            >
+              Changelog
+            </Link>
+
             <ListHeader>Superteam Productions</ListHeader>
             <Link
+              as={NextLink}
               color="brand.slate.500"
               _hover={{
                 color: 'brand.slate.800',
@@ -258,6 +209,7 @@ export const Footer = () => {
               Build
             </Link>
             <Link
+              as={NextLink}
               color="brand.slate.500"
               _hover={{
                 color: 'brand.slate.800',
@@ -268,6 +220,7 @@ export const Footer = () => {
               Media
             </Link>
             <Link
+              as={NextLink}
               color="brand.slate.500"
               _hover={{
                 color: 'brand.slate.800',

@@ -15,6 +15,7 @@ import {
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { MediaPicker } from 'degen';
+import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -27,23 +28,22 @@ import { SelectBox } from '@/components/Form/SelectBox';
 import { SocialInput } from '@/components/Form/SocialInput';
 import { SkillSelect } from '@/components/misc/SkillSelect';
 import { socials } from '@/components/Talent/YourLinks';
-import type { MultiSelectOptions } from '@/constants';
 import {
   CommunityList,
   CountryList,
   IndustryList,
+  type MultiSelectOptions,
   web3Exp,
   workExp,
   workType,
 } from '@/constants';
 import type { PoW } from '@/interface/pow';
-import type { SubSkillsType } from '@/interface/skills';
-import { SkillList } from '@/interface/skills';
+import { SkillList, type SubSkillsType } from '@/interface/skills';
 import { Default } from '@/layouts/Default';
 import { Meta } from '@/layouts/Meta';
 import { userStore } from '@/store/user';
+import { isUsernameAvailable } from '@/utils/isUsernameAvailable';
 import { uploadToCloudinary } from '@/utils/upload';
-import { isUsernameAvailable } from '@/utils/username';
 
 type FormData = {
   username: string;
@@ -114,7 +114,7 @@ const parseSkillsAndSubskills = (skillsObject: any) => {
   return { skills, subSkills };
 };
 
-export default function EditProfilePage() {
+export default function EditProfilePage({ slug }: { slug: string }) {
   const { userInfo, setUserInfo } = userStore();
   const { register, handleSubmit, setValue, watch } = useForm<FormData>();
 
@@ -156,7 +156,7 @@ export default function EditProfilePage() {
     socialLinksValidityRef.current[field] = isValid;
 
     const allUrlsValid = socialLinkFields.every(
-      (f) => socialLinksValidityRef.current[f as keyof FormData]
+      (f) => socialLinksValidityRef.current[f as keyof FormData],
     );
 
     setAnySocialUrlInvalid(!allUrlsValid);
@@ -171,7 +171,7 @@ export default function EditProfilePage() {
       if (userInfo.interests) {
         const interestsArray = JSON.parse(userInfo.interests);
         const defaultInterests = interestsArray.map((value: string) =>
-          IndustryList.find((option) => option.value === value)
+          IndustryList.find((option) => option.value === value),
         );
         setValue('interests', defaultInterests);
         setDropDownValues((prev) => ({
@@ -249,6 +249,7 @@ export default function EditProfilePage() {
             status: 'error',
             duration: 5000,
             isClosable: true,
+            variant: 'subtle',
           });
           return;
         }
@@ -263,13 +264,14 @@ export default function EditProfilePage() {
           status: 'error',
           duration: 5000,
           isClosable: true,
+          variant: 'subtle',
         });
         return;
       }
       setDiscordError(false);
 
       const filledSocialLinksCount = socialLinkFields.filter(
-        (field) => data[field as keyof FormData]
+        (field) => data[field as keyof FormData],
       ).length;
 
       setSocialError(filledSocialLinksCount < 1);
@@ -281,6 +283,7 @@ export default function EditProfilePage() {
           status: 'error',
           duration: 5000,
           isClosable: true,
+          variant: 'subtle',
         });
         return;
       }
@@ -292,12 +295,13 @@ export default function EditProfilePage() {
           status: 'error',
           duration: 5000,
           isClosable: true,
+          variant: 'subtle',
         });
         return;
       }
 
       const interestsJSON = JSON.stringify(
-        (data.interests || []).map((interest) => interest.value)
+        (data.interests || []).map((interest) => interest.value),
       );
 
       const communityArray = (data.community || []).map((item) => item.value);
@@ -305,7 +309,7 @@ export default function EditProfilePage() {
 
       const combinedSkills = skills.map((mainskill) => {
         const main = SkillList.find(
-          (skill) => skill.mainskill === mainskill.value
+          (skill) => skill.mainskill === mainskill.value,
         );
         const sub: SubSkillsType[] = [];
 
@@ -344,22 +348,22 @@ export default function EditProfilePage() {
       }, {} as Partial<FormData>);
 
       const response = await axios.post('/api/user/edit', {
-        id: userInfo?.id,
         ...finalUpdatedData,
       });
 
+      setUserInfo({ ...userInfo, ...response.data });
+
       await axios.post('/api/pow/edit', {
-        userId: userInfo?.id,
         pows: pow,
       });
 
-      setUserInfo(response.data);
       toast({
         title: 'Profile updated.',
         description: 'Your profile has been updated successfully!',
         status: 'success',
         duration: 3000,
         isClosable: true,
+        variant: 'subtle',
       });
       setTimeout(() => {
         router.push(`/t/${data.username}`);
@@ -372,9 +376,16 @@ export default function EditProfilePage() {
         status: 'error',
         duration: 5000,
         isClosable: true,
+        variant: 'subtle',
       });
     }
   };
+
+  useEffect(() => {
+    if (userInfo && slug !== userInfo?.username) {
+      router.push(`/t/${slug}`);
+    }
+  }, [slug, router, userInfo]);
 
   return (
     <>
@@ -393,24 +404,28 @@ export default function EditProfilePage() {
             </Heading>
             <form onSubmit={handleSubmit(onSubmit)}>
               <FormControl>
-                <Text mt={12} mb={5} fontSize="xl">
-                  Personal Info
+                <Text
+                  mt={12}
+                  mb={5}
+                  color={'brand.slate.600'}
+                  fontSize="lg"
+                  fontWeight={600}
+                  letterSpacing={0.4}
+                >
+                  PERSONAL INFO
                 </Text>
-
-                {/* eslint-disable no-nested-ternary */}
-
-                {isPhotoLoading ? (
-                  <></>
-                ) : photoUrl ? (
-                  <>
-                    <FormLabel
-                      mb={'0'}
-                      pb={'0'}
-                      color={'brand.slate.500'}
-                      requiredIndicator={<></>}
-                    >
-                      Profile Picture
-                    </FormLabel>
+                <Box mb={4}>
+                  <FormLabel
+                    mb={'1'}
+                    pb={'0'}
+                    color={'brand.slate.500'}
+                    requiredIndicator={<></>}
+                  >
+                    Profile Picture
+                  </FormLabel>
+                  {isPhotoLoading ? (
+                    <></>
+                  ) : photoUrl ? (
                     <MediaPicker
                       defaultValue={{ url: photoUrl, type: 'image' }}
                       onChange={async (e) => {
@@ -426,17 +441,7 @@ export default function EditProfilePage() {
                       compact
                       label="Choose or drag and drop media"
                     />
-                  </>
-                ) : (
-                  <>
-                    <FormLabel
-                      mb={'0'}
-                      pb={'0'}
-                      color={'brand.slate.500'}
-                      requiredIndicator={<></>}
-                    >
-                      Profile Picture
-                    </FormLabel>
+                  ) : (
                     <MediaPicker
                       onChange={async (e) => {
                         setUploading(true);
@@ -451,8 +456,8 @@ export default function EditProfilePage() {
                       compact
                       label="Choose or drag and drop media"
                     />
-                  </>
-                )}
+                  )}
+                </Box>
                 <InputField
                   label="Username"
                   placeholder="Username"
@@ -508,8 +513,15 @@ export default function EditProfilePage() {
                   </Text>
                 </Box>
 
-                <Text mt={8} mb={5} fontSize="xl">
-                  Socials
+                <Text
+                  mt={12}
+                  mb={5}
+                  color={'brand.slate.600'}
+                  fontSize="lg"
+                  fontWeight={600}
+                  letterSpacing={0.4}
+                >
+                  SOCIALS
                 </Text>
 
                 {socials.map((sc, idx: number) => {
@@ -528,7 +540,7 @@ export default function EditProfilePage() {
                       onUrlValidation={(isValid) => {
                         handleUrlValidation(
                           isValid,
-                          sc.label.toLowerCase() as keyof FormData
+                          sc.label.toLowerCase() as keyof FormData,
                         );
                       }}
                     />
@@ -538,8 +550,15 @@ export default function EditProfilePage() {
                   <Text color="red">At least one social link is required!</Text>
                 )}
 
-                <Text mt={8} mb={5} fontSize="xl">
-                  Work
+                <Text
+                  mt={12}
+                  mb={5}
+                  color={'brand.slate.600'}
+                  fontSize="lg"
+                  fontWeight={600}
+                  letterSpacing={0.4}
+                >
+                  WORK
                 </Text>
 
                 <Box w={'full'} mb={'1.25rem'}>
@@ -556,7 +575,7 @@ export default function EditProfilePage() {
                     onChange={(selectedOptions: any) => {
                       const selectedInterests = selectedOptions
                         ? selectedOptions.map(
-                            (elm: { label: string; value: string }) => elm
+                            (elm: { label: string; value: string }) => elm,
                           )
                         : [];
                       setDropDownValues({
@@ -683,7 +702,7 @@ export default function EditProfilePage() {
                           <DeleteIcon
                             onClick={() => {
                               setPow((prevPow) =>
-                                prevPow.filter((_ele, id) => idx !== id)
+                                prevPow.filter((_ele, id) => idx !== id),
                               );
                             }}
                             cursor={'pointer'}
@@ -753,3 +772,10 @@ export default function EditProfilePage() {
     </>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { slug } = context.query;
+  return {
+    props: { slug },
+  };
+};
